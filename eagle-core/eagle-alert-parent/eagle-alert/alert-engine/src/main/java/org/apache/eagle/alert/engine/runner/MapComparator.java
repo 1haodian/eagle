@@ -46,12 +46,9 @@ public class MapComparator<K, V> {
     public void compare() {
         Set<K> keys1 = map1.keySet();
         Set<K> keys2 = map2.keySet();
-        LOG.info("keys1"+keys1);
-        LOG.info("keys2"+keys2);
         Collection<K> addedKeys = CollectionUtils.subtract(keys1, keys2);
         Collection<K> removedKeys = CollectionUtils.subtract(keys2, keys1);
         Collection<K> modifiedKeys = CollectionUtils.intersection(keys1, keys2);
-        LOG.info("modifiedKeys"+modifiedKeys);
         addedKeys.forEach(k -> added.add(map1.get(k)));
         removedKeys.forEach(k -> removed.add(map2.get(k)));
         modifiedKeys.forEach(k -> {

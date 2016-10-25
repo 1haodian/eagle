@@ -184,7 +184,6 @@ public class StreamWindowManagerImpl implements StreamWindowManager, Serializabl
 
     public void updateOutputCollector(PartitionedEventCollector outputCollector) {
         this.collector = outputCollector;
-       // this.comparator = PartitionedEventTimeOrderingComparator.INSTANCE;
         if (windowBuckets != null && !windowBuckets.isEmpty()) {
             windowBuckets.forEach((windowStartTime, streamWindow) -> streamWindow.register(outputCollector));
         }

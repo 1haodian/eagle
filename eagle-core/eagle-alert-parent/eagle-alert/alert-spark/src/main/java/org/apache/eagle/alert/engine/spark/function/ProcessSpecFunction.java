@@ -89,14 +89,12 @@ public class ProcessSpecFunction implements Function<JavaRDD<MessageAndMetadata<
         AlertBoltSpec alertBoltSpec = client.getAlertBoltSpec();
         alertBoltSpecRef.set(alertBoltSpec);
         //Fix always get getModified policy
-        alertBoltSpec.getBoltPoliciesMap().values().forEach((policyDefinitions) -> {
-                    policyDefinitions.forEach(policy -> {
-                                policy.getDefinition().setInputStreams(policy.getInputStreams());
-                                policy.getDefinition().setOutputStreams(policy.getOutputStreams());
-                            }
-
-                    );
+        alertBoltSpec.getBoltPoliciesMap().values().forEach((policyDefinitions) -> policyDefinitions.forEach(policy -> {
+                    policy.getDefinition().setInputStreams(policy.getInputStreams());
+                    policy.getDefinition().setOutputStreams(policy.getOutputStreams());
                 }
+
+                )
         );
         sdsRef.set(client.getSds());
         publishSpecRef.set(client.getPublishSpec());

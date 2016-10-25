@@ -35,12 +35,10 @@ import scala.Tuple2;
 
 import java.io.Serializable;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Collection;
 import java.util.ArrayList;
-import java.util.Collections;
 
 public class SparkStreamRouterBoltOutputCollector implements PartitionedEventCollector, Serializable {
     private static final Logger LOG = LoggerFactory.getLogger(SparkStreamRouterBoltOutputCollector.class);
@@ -55,14 +53,6 @@ public class SparkStreamRouterBoltOutputCollector implements PartitionedEventCol
     }
 
     public List<Tuple2<Integer, PartitionedEvent>> emitResult() {
-        if (outputCollector.isEmpty()) {
-            LOG.info("Emit Empty");
-            return Collections.emptyList();
-        }
-      /*  List<Tuple2<Integer, PartitionedEvent>> result = new LinkedList<>();
-        result.addAll(outputCollector);
-        outputCollector.clear();*/
-        LOG.info("Emit result {}", outputCollector);
         return outputCollector;
     }
 
@@ -72,10 +62,10 @@ public class SparkStreamRouterBoltOutputCollector implements PartitionedEventCol
             StreamPartition partition = event.getPartition();
             StreamRouterSpec routerSpec = routeSpecMap.get(partition);
             if (routerSpec == null) {
-               // if (LOG.isDebugEnabled()) {
+                if (LOG.isDebugEnabled()) {
                     // Don't know how to route stream, if it's correct, it's better to filter useless stream in spout side
-                    LOG.info("Drop event {} as StreamPartition {} is not pointed to any router metadata {}", event, event.getPartition(), routeSpecMap);
-                //}
+                    LOG.debug("Drop event {} as StreamPartition {} is not pointed to any router metadata {}", event, event.getPartition(), routeSpecMap);
+                }
                 this.drop(event);
                 return;
             }
@@ -98,9 +88,9 @@ public class SparkStreamRouterBoltOutputCollector implements PartitionedEventCol
                     int partitionIndex = getPartitionIndex(streamRoute);
                     try {
                         PartitionedEvent emittedEvent = new PartitionedEvent(newEvent, routerSpec.getPartition(), streamRoute.getPartitionKey());
-                       // if (LOG.isDebugEnabled()) {
-                            LOG.info("Emitted to partition {} with message {}", partitionIndex, emittedEvent);
-                      //  }
+                        if (LOG.isDebugEnabled()) {
+                            LOG.debug("Emitted to partition {} with message {}", partitionIndex, emittedEvent);
+                        }
                         outputCollector.add(new Tuple2<>(partitionIndex, event));
                     } catch (RuntimeException ex) {
                         LOG.info("Failed to emit to partition {} with {}", partitionIndex, newEvent, ex);

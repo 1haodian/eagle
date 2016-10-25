@@ -70,15 +70,15 @@ public class RouteState implements Serializable {
         routePartitionerMapRef.set(routePartitionerAccum.value());
         cachedSSSRef.set(cachedSSSAccm.value());
         cachedSRSRef.set(cachedSRSAccm.value());
-        LOG.info("---------routeSpecMapRef----------" + routeSpecMapRef.get());
-        LOG.info("---------routePartitionerMapRef----------" + routePartitionerMapRef.get());
-        LOG.info("---------cachedSSSRef----------" + cachedSSSRef.get());
-        LOG.info("---------cachedSRSRef----------" + cachedSRSRef.get());
+        LOG.debug("---------routeSpecMapRef----------" + routeSpecMapRef.get());
+        LOG.debug("---------routePartitionerMapRef----------" + routePartitionerMapRef.get());
+        LOG.debug("---------cachedSSSRef----------" + cachedSSSRef.get());
+        LOG.debug("---------cachedSRSRef----------" + cachedSRSRef.get());
     }
 
     public Map<StreamPartition, StreamRouterSpec> getRouteSpecMapByPartition(int partitionNum) {
         Map<Integer, Map<StreamPartition, StreamRouterSpec>> partitionTorouteSpecMap = routeSpecMapRef.get();
-        LOG.info("---RouteState----getRouteSpecMapByPartition----------" + (partitionTorouteSpecMap));
+        LOG.debug("---RouteState----getRouteSpecMapByPartition----------" + (partitionTorouteSpecMap));
         Map<StreamPartition, StreamRouterSpec> routeSpec = partitionTorouteSpecMap.get(partitionNum);
         if (routeSpec == null) {
             routeSpec = new HashMap<>();
@@ -89,7 +89,7 @@ public class RouteState implements Serializable {
     public Map<StreamPartition, List<StreamRoutePartitioner>> getRoutePartitionerByPartition(int partitionNum) {
 
         Map<Integer, Map<StreamPartition, List<StreamRoutePartitioner>>> partitionToroutePartitioner = routePartitionerMapRef.get();
-        LOG.info("---RouteState----getRoutePartitionerByPartition----------" + (partitionToroutePartitioner));
+        LOG.debug("---RouteState----getRoutePartitionerByPartition----------" + (partitionToroutePartitioner));
         Map<StreamPartition, List<StreamRoutePartitioner>> routePartitioner = partitionToroutePartitioner.get(partitionNum);
         if (routePartitioner == null) {
             routePartitioner = new HashMap<>();
@@ -99,7 +99,7 @@ public class RouteState implements Serializable {
 
     public Map<StreamPartition, StreamSortSpec> getCachedSSSMapByPartition(int partitionNum) {
         Map<Integer, Map<StreamPartition, StreamSortSpec>> cachedSSSMap =  cachedSSSRef.get();
-        LOG.info("---RouteState----getCachedSSSMapByPartition----------" + (cachedSSSMap));
+        LOG.debug("---RouteState----getCachedSSSMapByPartition----------" + (cachedSSSMap));
         Map<StreamPartition, StreamSortSpec> cachedSSS = cachedSSSMap.get(partitionNum);
         if (cachedSSS == null) {
             cachedSSS = new HashMap<>();
@@ -109,7 +109,7 @@ public class RouteState implements Serializable {
 
     public Map<StreamPartition, StreamRouterSpec> getCachedSRSMapByPartition(int partitionNum) {
         Map<Integer, Map<StreamPartition, StreamRouterSpec>> cachedSRSMap =  cachedSRSRef.get();
-        LOG.info("---RouteState----getCachedSRSMapByPartition----------" + (cachedSRSMap));
+        LOG.debug("---RouteState----getCachedSRSMapByPartition----------" + (cachedSRSMap));
         Map<StreamPartition, StreamRouterSpec> cachedSRS = cachedSRSMap.get(partitionNum);
         if (cachedSRS == null) {
             cachedSRS = new HashMap<>();

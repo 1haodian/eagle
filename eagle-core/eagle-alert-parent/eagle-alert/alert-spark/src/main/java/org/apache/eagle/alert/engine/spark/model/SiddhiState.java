@@ -40,7 +40,7 @@ public class SiddhiState implements Serializable {
 
     public void recover() {
         siddhiSnapshot.set(siddhiSnapShotAccum.value());
-        LOG.info("---------siddhiSnapshot----------" + siddhiSnapshot.get());
+        LOG.debug("---------siddhiSnapshot----------" + siddhiSnapshot.get());
     }
 
     public void store(byte[] snapShot, String boltId, int partitionNum) {
@@ -48,13 +48,13 @@ public class SiddhiState implements Serializable {
         Map<String, byte[]> boltIdToSnapShot = new HashMap<>();
         boltIdToSnapShot.put(boltId, snapShot);
         siddhiSnapShot.put(partitionNum, boltIdToSnapShot);
-        LOG.info("---------store---siddhiSnapshot----------" + siddhiSnapShot);
+        LOG.debug("---------store---siddhiSnapshot----------" + siddhiSnapShot);
         siddhiSnapShotAccum.add(siddhiSnapShot);
     }
 
     public byte[] getSiddhiSnapShotByBoltIdAndPartitionNum(String boltId, int partitionNum) {
         Map<Integer, Map<String, byte[]>> partitionToSnapShot = siddhiSnapshot.get();
-        LOG.info("---SiddhiState----getSiddhiSnapShotByPartition----------" + (partitionToSnapShot));
+        LOG.debug("---SiddhiState----getSiddhiSnapShotByPartition----------" + (partitionToSnapShot));
         Map<String, byte[]> boltIdToSnapShot = partitionToSnapShot.get(partitionNum);
         byte[] siddhiSnapshot = null;
         if (boltIdToSnapShot != null) {

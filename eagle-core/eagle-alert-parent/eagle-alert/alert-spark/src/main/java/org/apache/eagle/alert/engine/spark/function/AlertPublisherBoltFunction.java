@@ -69,7 +69,7 @@ public class AlertPublisherBoltFunction implements VoidFunction<Iterator<Tuple2<
                 publishState.store(streamId, cachedPublishments);
             }
             AlertStreamEvent alertEvent = tuple2._2;
-            LOG.info("AlertPublisherBoltFunction " + alertEvent);
+            LOG.debug("AlertPublisherBoltFunction " + alertEvent);
             alertPublisher.nextEvent(alertEvent);
         }
         if (alertPublisher != null) {
@@ -87,7 +87,7 @@ public class AlertPublisherBoltFunction implements VoidFunction<Iterator<Tuple2<
             LOG.info("no publishments with PublishSpec {} for this topology", pubSpec);
             return;
         }
-        LOG.info("newPublishments{} ", newPublishments);
+        LOG.debug("newPublishments{} ", newPublishments);
         Map<String, Publishment> newPublishmentsMap = new HashMap<>();
         newPublishments.forEach(p -> newPublishmentsMap.put(p.getName(), p));
         MapComparator<String, Publishment> comparator = new MapComparator<>(newPublishmentsMap, cachedPublishments);
@@ -95,10 +95,10 @@ public class AlertPublisherBoltFunction implements VoidFunction<Iterator<Tuple2<
         List<Publishment> beforeModified = new ArrayList<>();
         comparator.getModified().forEach(p -> beforeModified.add(cachedPublishments.get(p.getName())));
 
-        LOG.info("cachedPublishments {}", cachedPublishments);
-        LOG.info("getAddedPublishments {}", comparator.getAdded());
-        LOG.info("getRemovedPublishments {}", comparator.getRemoved());
-        LOG.info("getModifiedPublishments {}", comparator.getModified());
+        LOG.debug("cachedPublishments {}", cachedPublishments);
+        LOG.debug("getAddedPublishments {}", comparator.getAdded());
+        LOG.debug("getRemovedPublishments {}", comparator.getRemoved());
+        LOG.debug("getModifiedPublishments {}", comparator.getModified());
 
         alertPublisher.onPublishChange(comparator.getAdded(), comparator.getRemoved(), comparator.getModified(), beforeModified);
         this.cachedPublishments = newPublishmentsMap;

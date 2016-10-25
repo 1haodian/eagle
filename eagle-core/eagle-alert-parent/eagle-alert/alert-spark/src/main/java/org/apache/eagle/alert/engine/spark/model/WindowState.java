@@ -73,9 +73,9 @@ public class WindowState implements Serializable {
         streamWindowRef.set(streamWindowAccum.value());
         streamSortHandlersRef.set(streamSortHandlersAccum.value());
 
-        LOG.info("---------streamTimeClock----------" + streamTimeClockRef.get());
-        LOG.info("---------streamWindowRef----------" + streamWindowRef.get());
-        LOG.info("---------streamSortHandlersRef----------" + streamSortHandlersRef.get());
+        LOG.debug("---------streamTimeClock----------" + streamTimeClockRef.get());
+        LOG.debug("---------streamWindowRef----------" + streamWindowRef.get());
+        LOG.debug("---------streamSortHandlersRef----------" + streamSortHandlersRef.get());
     }
 
     public void store(StreamRouterImpl router, int partitionNum) {
@@ -96,7 +96,7 @@ public class WindowState implements Serializable {
 
     public Map<String, StreamTimeClock> getStreamTimeClockByPartition(int partitionNum) {
         Map<Integer, Map<String, StreamTimeClock>> partitionToStreamClock = getStreamTimeClock();
-        LOG.info("---StreamRouteBoltFunction----getStreamTimeClockByPartition----------" + (partitionToStreamClock));
+        LOG.debug("---StreamRouteBoltFunction----getStreamTimeClockByPartition----------" + (partitionToStreamClock));
         Map<String, StreamTimeClock> streamTimeClockMap = partitionToStreamClock.get(partitionNum);
         if (streamTimeClockMap == null) {
             streamTimeClockMap = new HashMap<>();
@@ -107,7 +107,7 @@ public class WindowState implements Serializable {
     public Map<StreamTimeClockListener, String> getStreamWindowsByPartition(int partitionNum) {
 
         Map<Integer, Map<StreamTimeClockListener, String>> partitionToStreamWindow = getStreamWindows();
-        LOG.info("---StreamRouteBoltFunction----getStreamWindowsByPartition----------" + (partitionToStreamWindow));
+        LOG.debug("---StreamRouteBoltFunction----getStreamWindowsByPartition----------" + (partitionToStreamWindow));
         Map<StreamTimeClockListener, String> streamWindowMap = partitionToStreamWindow.get(partitionNum);
         if (streamWindowMap == null) {
             streamWindowMap = new HashMap<>();
@@ -117,7 +117,7 @@ public class WindowState implements Serializable {
 
     public Map<StreamPartition, StreamSortHandler> getStreamSortHandlerByPartition(int partitionNum) {
         Map<Integer, Map<StreamPartition, StreamSortHandler>> partitionToStreamSortHandler = streamSortHandlersRef.get();
-        LOG.info("---StreamRouteBoltFunction----streamSortHandlerMap----------" + (partitionToStreamSortHandler));
+        LOG.debug("---StreamRouteBoltFunction----streamSortHandlerMap----------" + (partitionToStreamSortHandler));
         Map<StreamPartition, StreamSortHandler> streamSortHandlerMap = partitionToStreamSortHandler.get(partitionNum);
         if (streamSortHandlerMap == null) {
             streamSortHandlerMap = new HashMap<>();

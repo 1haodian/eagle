@@ -96,7 +96,7 @@ public class AlertBoltFunction implements PairFlatMapFunction<Iterator<Tuple2<In
 
     private void onAlertBoltSpecChange(String boltId, AlertBoltSpec spec, Map<String, StreamDefinition> sds, PolicyGroupEvaluatorImpl policyGroupEvaluator, PolicyState policyState) {
         List<PolicyDefinition> newPolicies = spec.getBoltPoliciesMap().get(boltId);
-        LOG.info("newPolicies {}", newPolicies);
+        LOG.debug("newPolicies {}", newPolicies);
         if (newPolicies == null) {
             LOG.info("no new policy with AlertBoltSpec {} for this bolt {}", spec, boltId);
             return;
@@ -104,13 +104,13 @@ public class AlertBoltFunction implements PairFlatMapFunction<Iterator<Tuple2<In
 
         Map<String, PolicyDefinition> newPoliciesMap = new HashMap<>();
         newPolicies.forEach(p -> newPoliciesMap.put(p.getName(), p));
-        LOG.info("newPoliciesMap {}", newPoliciesMap);
+        LOG.debug("newPoliciesMap {}", newPoliciesMap);
         MapComparator<String, PolicyDefinition> comparator = new MapComparator<>(newPoliciesMap, policyState.getCachedPolicyByBoltId(boltId));
         comparator.compare();
-        LOG.info("cachedPolicies {}", policyState.getCachedPolicyByBoltId(boltId));
-        LOG.info("getAdded {}", comparator.getAdded());
-        LOG.info("getRemoved {}", comparator.getRemoved());
-        LOG.info("getModified {}", comparator.getModified());
+        LOG.debug("cachedPolicies {}", policyState.getCachedPolicyByBoltId(boltId));
+        LOG.debug("getAdded {}", comparator.getAdded());
+        LOG.debug("getRemoved {}", comparator.getRemoved());
+        LOG.debug("getModified {}", comparator.getModified());
         policyGroupEvaluator.onPolicyChange(comparator.getAdded(), comparator.getRemoved(), comparator.getModified(), sds);
 
         policyState.store(boltId, newPoliciesMap, policyGroupEvaluator.getPolicyDefinitionMap(), policyGroupEvaluator.getPolicyStreamHandlerMap());

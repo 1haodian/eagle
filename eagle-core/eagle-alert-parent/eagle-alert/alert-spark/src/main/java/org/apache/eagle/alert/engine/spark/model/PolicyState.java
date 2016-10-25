@@ -66,15 +66,15 @@ public class PolicyState implements Serializable {
         cachedPoliciesRef.set(cachedPolicies.value());
         policyDefinitionRef.set(policyDefinition.value());
         policyStreamHandlerRef.set(policyStreamHandler.value());
-        LOG.info("---------cachedPoliciesRef----------" + cachedPoliciesRef.get());
-        LOG.info("---------policyDefinitionRef----------" + policyDefinitionRef.get());
-        LOG.info("---------policyStreamHandlerRef----------" + policyStreamHandlerRef.get());
+        LOG.debug("---------cachedPoliciesRef----------" + cachedPoliciesRef.get());
+        LOG.debug("---------policyDefinitionRef----------" + policyDefinitionRef.get());
+        LOG.debug("---------policyStreamHandlerRef----------" + policyStreamHandlerRef.get());
     }
 
     public void store(String boltId, Map<String, PolicyDefinition> cachedPoliciesMap, Map<String, PolicyDefinition> newPolicyDefinition, Map<String, CompositePolicyHandler> newPolicyStreamHandler) {
         Map<String, Map<String, PolicyDefinition>> cachedPolicy = new HashMap<>();
         cachedPolicy.put(boltId, cachedPoliciesMap);
-        LOG.info("---------store---cachedPoliciesMap----------" + cachedPoliciesMap);
+        LOG.debug("---------store---cachedPoliciesMap----------" + cachedPoliciesMap);
         cachedPolicies.add(cachedPolicy);
 
         Map<String, Map<String, PolicyDefinition>> policyDefinitionMap = new HashMap<>();
@@ -89,7 +89,7 @@ public class PolicyState implements Serializable {
 
     public Map<String, PolicyDefinition> getCachedPolicyByBoltId(String boltId) {
         Map<String, Map<String, PolicyDefinition>> boltIdToPolicy = cachedPoliciesRef.get();
-        LOG.info("---PolicyState----getPolicyByBoltId----------" + (boltIdToPolicy));
+        LOG.debug("---PolicyState----getPolicyByBoltId----------" + (boltIdToPolicy));
         Map<String, PolicyDefinition> boltIdToPolicykMap = boltIdToPolicy.get(boltId);
         if (boltIdToPolicykMap == null) {
             boltIdToPolicykMap = new HashMap<>();
@@ -99,7 +99,7 @@ public class PolicyState implements Serializable {
 
     public Map<String, PolicyDefinition> getPolicyDefinitionByBoltId(String boltId) {
         Map<String, Map<String, PolicyDefinition>> boltIdToPolicy = policyDefinitionRef.get();
-        LOG.info("---PolicyState----getPolicyDefinitionByBoltId----------" + (boltIdToPolicy));
+        LOG.debug("---PolicyState----getPolicyDefinitionByBoltId----------" + (boltIdToPolicy));
         Map<String, PolicyDefinition> boltIdToPolicyMap = boltIdToPolicy.get(boltId);
         if (boltIdToPolicyMap == null) {
             boltIdToPolicyMap = new HashMap<>();
@@ -109,7 +109,7 @@ public class PolicyState implements Serializable {
 
     public Map<String, CompositePolicyHandler> getPolicyStreamHandlerByBoltId(String boltId) {
         Map<String, Map<String, CompositePolicyHandler>> boltIdToPolicyStreamHandler = policyStreamHandlerRef.get();
-        LOG.info("---PolicyState----getPolicyStreamHandlerByBoltId----------" + (boltIdToPolicyStreamHandler));
+        LOG.debug("---PolicyState----getPolicyStreamHandlerByBoltId----------" + (boltIdToPolicyStreamHandler));
         Map<String, CompositePolicyHandler> boltIdToPolicyStreamHandlerMap = boltIdToPolicyStreamHandler.get(boltId);
         if (boltIdToPolicyStreamHandlerMap == null) {
             boltIdToPolicyStreamHandlerMap = new HashMap<>();

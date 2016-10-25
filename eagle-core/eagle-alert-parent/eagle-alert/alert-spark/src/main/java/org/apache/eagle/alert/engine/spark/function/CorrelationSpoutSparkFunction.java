@@ -116,7 +116,6 @@ public class CorrelationSpoutSparkFunction implements PairFlatMapFunction<Tuple2
         if (CollectionUtils.isEmpty(outputTuple2s)) {
             return Collections.emptyIterator();
         }
-       // LOG.info("CorrelationSpoutSparkFunction {} ", outputTuple2s);
         return outputTuple2s.iterator();
     }
 

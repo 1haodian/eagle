@@ -43,7 +43,7 @@ public class PublishState implements Serializable {
 
     public void recover() {
         cachedPublishmentsRef.set(cachedPublishmentsAccum.value());
-        LOG.info("---------cachedPublishmentsRef----------" + cachedPublishmentsRef.get());
+        LOG.debug("---------cachedPublishmentsRef----------" + cachedPublishmentsRef.get());
     }
 
     public void store(String streamId, Map<String, Publishment> cachedPublishments) {
@@ -58,7 +58,7 @@ public class PublishState implements Serializable {
 
     public Map<String, Publishment> getCachedPublishmentsByStreamId(String streamId) {
         Map<String, Map<String, Publishment>> streamIdToCachedPublishments = cachedPublishmentsRef.get();
-        LOG.info("---PublishState----getCachedPublishmentsByStreamId----------" + (streamIdToCachedPublishments));
+        LOG.debug("---PublishState----getCachedPublishmentsByStreamId----------" + (streamIdToCachedPublishments));
         Map<String, Publishment> cachedPublishments = streamIdToCachedPublishments.get(streamId);
         if (cachedPublishments == null) {
             cachedPublishments = new HashMap<>();

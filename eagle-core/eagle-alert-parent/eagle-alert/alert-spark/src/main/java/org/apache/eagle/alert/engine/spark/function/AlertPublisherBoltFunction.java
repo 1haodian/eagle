@@ -69,7 +69,7 @@ public class AlertPublisherBoltFunction implements VoidFunction<Iterator<Tuple2<
                 publishState.store(streamId, cachedPublishments);
             }
             AlertStreamEvent alertEvent = tuple2._2;
-            LOG.debug("AlertPublisherBoltFunction " + alertEvent);
+            LOG.info("AlertPublisherBoltFunction " + alertEvent);
             alertPublisher.nextEvent(alertEvent);
         }
         if (alertPublisher != null) {
@@ -87,19 +87,12 @@ public class AlertPublisherBoltFunction implements VoidFunction<Iterator<Tuple2<
             LOG.info("no publishments with PublishSpec {} for this topology", pubSpec);
             return;
         }
-        LOG.debug("newPublishments{} ", newPublishments);
         Map<String, Publishment> newPublishmentsMap = new HashMap<>();
         newPublishments.forEach(p -> newPublishmentsMap.put(p.getName(), p));
         MapComparator<String, Publishment> comparator = new MapComparator<>(newPublishmentsMap, cachedPublishments);
         comparator.compare();
         List<Publishment> beforeModified = new ArrayList<>();
         comparator.getModified().forEach(p -> beforeModified.add(cachedPublishments.get(p.getName())));
-
-        LOG.debug("cachedPublishments {}", cachedPublishments);
-        LOG.debug("getAddedPublishments {}", comparator.getAdded());
-        LOG.debug("getRemovedPublishments {}", comparator.getRemoved());
-        LOG.debug("getModifiedPublishments {}", comparator.getModified());
-
         alertPublisher.onPublishChange(comparator.getAdded(), comparator.getRemoved(), comparator.getModified(), beforeModified);
         this.cachedPublishments = newPublishmentsMap;
     }

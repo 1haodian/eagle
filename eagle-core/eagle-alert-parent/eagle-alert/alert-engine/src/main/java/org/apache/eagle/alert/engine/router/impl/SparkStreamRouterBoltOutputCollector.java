@@ -57,7 +57,6 @@ public class SparkStreamRouterBoltOutputCollector implements PartitionedEventCol
     }
 
     public void emit(PartitionedEvent event) {
-        LOG.info("Emit {} getPartition {}", event, event.getPartition());
         try {
             StreamPartition partition = event.getPartition();
             StreamRouterSpec routerSpec = routeSpecMap.get(partition);

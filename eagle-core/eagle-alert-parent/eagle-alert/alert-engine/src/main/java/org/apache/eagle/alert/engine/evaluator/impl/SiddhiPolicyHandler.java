@@ -98,9 +98,9 @@ public class SiddhiPolicyHandler implements PolicyStreamHandler, Serializable {
         if (inputHandler != null) {
             context.getPolicyCounter().scope(String.format("%s.%s", this.context.getPolicyDefinition().getName(), "eval_count")).incr();
             inputHandler.send(event.getTimestamp(), event.getData());
-            //if (LOG.isDebugEnabled()) {
-            LOG.info("sent event to siddhi stream {} {}", streamId, event.getData());
-            //}
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("sent event to siddhi stream {} {}", streamId, event.getData());
+            }
         } else {
             context.getPolicyCounter().scope(String.format("%s.%s", this.context.getPolicyDefinition().getName(), "drop_count")).incr();
             LOG.warn("No input handler found for stream {}", streamId);

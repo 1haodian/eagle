@@ -1,0 +1,103 @@
+{
+	"concat": {
+		"js": {
+			"require": {
+				"options": {
+					"separator": "\n"
+				},
+				"src": [
+					"node_modules/jquery/dist/jquery.min.js",
+					"node_modules/jquery-slimscroll/jquery.slimscroll.min.js",
+					"node_modules/bootstrap/dist/js/bootstrap.min.js",
+					"node_modules/zombiej-bootstrap-components/bootstrap-components/js/bootstrap-components.min.js",
+					"node_modules/moment/min/moment-with-locales.min.js",
+					"node_modules/moment-timezone/builds/moment-timezone-with-data.min.js",
+					"node_modules/echarts/dist/echarts.min.js",
+					"node_modules/admin-lte/dist/js/app.min.js",
+					"node_modules/angular/angular.min.js",
+					"node_modules/angular-resource/angular-resource.min.js",
+					"node_modules/angular-route/angular-route.min.js",
+					"node_modules/angular-animate/angular-animate.min.js",
+					"node_modules/angular-ui-bootstrap/dist/ui-bootstrap-tpls.js",
+					"node_modules/angular-ui-router/release/angular-ui-router.min.js"
+				],
+				"dest": "tmp/public/js/modules.js"
+			},
+			"project": {
+				"options": {
+					"separator": "\n",
+					"sourceMap": true
+				},
+				"src": [
+					"dev/public/js/worker/sortTableFunc.js",
+					"dev/public/js/common.js",
+					"dev/public/js/index.js",
+					"dev/public/js/app.js",
+					"dev/public/js/services/main.js",
+					"dev/public/js/services/timeSrv.js",
+					"dev/public/js/services/pageSrv.js",
+					"dev/public/js/services/widgetSrv.js",
+					"dev/public/js/services/wrapStateSrv.js",
+					"dev/public/js/services/entitySrv.js",
+					"dev/public/js/services/siteSrv.js",
+					"dev/public/js/services/applicationSrv.js",
+					"dev/public/js/services/uiSrv.js",
+					"dev/public/js/services/policySrv.js",
+					"dev/public/js/components/main.js",
+					"dev/public/js/components/sortTable.js",
+					"dev/public/js/components/chart.js",
+					"dev/public/js/components/widget.js",
+					"dev/public/js/components/staticInclude.js",
+					"dev/public/js/components/editor.js",
+					"dev/public/js/components/naBlock.js",
+					"dev/public/js/ctrls/main.js",
+					"dev/public/js/ctrls/mainCtrl.js",
+					"dev/public/js/ctrls/alertCtrl.js",
+					"dev/public/js/ctrls/alertEditCtrl.js",
+					"dev/public/js/ctrls/integrationCtrl.js",
+					"dev/public/js/ctrls/siteCtrl.js"
+				],
+				"dest": "tmp/public/js/doc.js"
+			}
+		},
+		"css": {
+			"require": {
+				"src": [
+					"node_modules/bootstrap/dist/css/bootstrap.css",
+					"node_modules/zombiej-bootstrap-components/bootstrap-components/css/bootstrap-components.css",
+					"node_modules/zombiej-nvd3/build/nv.d3.css",
+					"node_modules/font-awesome/css/font-awesome.css",
+					"node_modules/admin-lte/dist/css/AdminLTE.css",
+					"node_modules/admin-lte/dist/css/skins/skin-blue.css",
+					"tmp/public/css/project.min.css"
+				],
+				"dest": "tmp/public/css/doc.css"
+			},
+			"project": {
+				"options": {
+					"separator": "\n"
+				},
+				"src": [
+					"dev/public/css/animation.css",
+					"dev/public/css/sortTable.css",
+					"dev/public/css/main.css"
+				],
+				"dest": "tmp/public/js/project.min.css"
+			}
+		}
+	},
+	"copy": {
+		"js": {
+			"worker": [
+				"public/js/worker/sortTableWorker.js",
+				"public/js/worker/../common.js",
+				"public/js/worker/sortTableFunc.js"
+			],
+			"reference": [
+				"node_modules/ace-builds/src-min-noconflict/ace.js",
+				"node_modules/ace-builds/src-min-noconflict/theme-tomorrow.js",
+				"node_modules/ace-builds/src-min-noconflict/mode-sql.js"
+			]
+		}
+	}
+}

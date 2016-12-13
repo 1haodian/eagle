@@ -26,18 +26,18 @@
     		url: "/metric/hbase/overview?startTime&endTime",
     		site: true,
     		templateUrl: "partials/hbase/overview.html",
-    		controller: "listCtrl",
+    		controller: "overviewCtrl",
     		resolve: { time: true }
     	})
-	metricApp.portal({name: "JMX Metric", icon: "taxi", list: [
+	metricApp.portal({name: "Hbase Metric", icon: "taxi", list: [
 		{name: "HBASE", path: "/metric/hbase/overview"}
 	]}, true);
 
-	metricApp.service("JPM", function ($q, $http, Time, Site, Application) {
+	metricApp.service("METRIC", function ($q, $http, Time, Site, Application) {
 		var METRIC = window._METRIC = {};
 
 		return METRIC;
 	});
 	metricApp.requireCSS("style/index.css");
-	metricApp.require("ctrl/overview.js");
+	metricApp.require("ctrl/overviewCtrl.js");
 })();

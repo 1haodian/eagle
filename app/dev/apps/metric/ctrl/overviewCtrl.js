@@ -99,13 +99,10 @@
 				tooltip: {
 					show: true
 				},
-				legend: {
-					data: ['Region Assignment']
-				},
 				xAxis: [
 					{
 						type: 'category',
-						data: ["1", "2", "3", "4", "5", "6"]
+						data: ["region 1", "region 2", "region 3", "region 4", "region 5", "region 6"],
 					}
 				],
 				yAxis: [
@@ -115,9 +112,11 @@
 				],
 				series: [
 					{
-						"name": "xiaoliang",
 						"type": "bar",
-						"data": [5, 20, 40, 10, 10, 20]
+						"data": [5, 20, 40, 10, 10, 20],
+						itemStyle: {
+							normal: {color: 'pink'}
+						}
 					}
 				]
 			};
@@ -150,12 +149,149 @@
 					}
 				]
 			};
+
+
+			assignnumoption = {
+				legend: {
+					data: ['Assign_max', 'Assign_min']
+				},
+				calculable: true,
+				xAxis: [
+					{
+						type: 'category',
+						boundaryGap: false,
+						barCategoryGap: '1',
+						data: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul']
+					}
+				],
+				yAxis: [
+					{
+						type: 'value',
+						axisLabel: {
+							formatter: '{value}'
+						}
+					}
+				],
+				series: [
+					{
+						type: 'line',
+						data: [11, 2, 15, 13, 3, 4, 5],
+						markPoint: {
+							data: [
+								{type: 'max', name: ''},
+								{type: 'min', name: ''}
+							]
+						},
+						markLine: {
+							data: [
+								{type: 'average', name: '75th',itemStyle: {normal: {areaStyle: {type: 'default'}, color: 'red'}}},
+								{type: 'max', name: 'avg',itemStyle: {normal: {areaStyle: {type: 'default'}, color: 'green'}}}
+							]
+						}
+					}
+				]
+			};
+
+			assignnumoption1 = {
+				legend: {
+					data: ['Assign_max', 'Assign_min']
+				},
+				calculable: true,
+				xAxis: [
+					{
+						type: 'category',
+						boundaryGap: false,
+						barCategoryGap: '1',
+						data: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul']
+					}
+				],
+				yAxis: [
+					{
+						type: 'value',
+						axisLabel: {
+							formatter: '{value}'
+						}
+					}
+				],
+				series: [
+					{
+						type: 'line',
+						data: [11, 20, 100, 9, 3, 4, 5],
+						markPoint: {
+							data: [
+								{type: 'max', name: ''},
+								{type: 'min', name: ''}
+							]
+						},
+						markLine: {
+							data: [
+								{type: 'average', name: '75th',itemStyle: {normal: {areaStyle: {type: 'default'}, color: 'red'}}},
+								{type: 'max', name: 'avg',itemStyle: {normal: {areaStyle: {type: 'default'}, color: 'green'}}},
+								{type: 'min', name: '75th',itemStyle: {normal: {areaStyle: {type: 'default'}, color: 'red'}}},
+							]
+						}
+					}
+				]
+			};
+
+			hlogsplittimeoption = {
+				legend: {
+					data: ['Assign_max', 'Assign_min']
+				},
+				calculable: true,
+				xAxis: [
+					{
+						type: 'category',
+						boundaryGap: false,
+						barCategoryGap: '1',
+						data: ['Mon', 'Tue', 'Web', 'Thu']
+					}
+				],
+				yAxis: [
+					{
+						type: 'value',
+						axisLabel: {
+							formatter: '{value}S'
+						}
+					}
+				],
+				series: [
+					{
+						type: 'line',
+						data: [11, 20, 6, 9],
+						markPoint: {
+							data: [
+								{type: 'max', name: ''},
+								{type: 'min', name: ''}
+							]
+						},
+						markLine: {
+							data: [
+								{type: 'average', name: '75th',itemStyle: {normal: {areaStyle: {type: 'default'}, color: 'red'}}},
+								{type: 'max', name: 'avg',itemStyle: {normal: {areaStyle: {type: 'default'}, color: 'green'}}},
+								{type: 'min', name: '75th',itemStyle: {normal: {areaStyle: {type: 'default'}, color: 'red'}}},
+							]
+						}
+					}
+				]
+			};
+
 			var ritcount = echarts.init(document.getElementById('ritcount'));
 			ritcount.setOption(option);
 			var memusage = echarts.init(document.getElementById('memusage'));
 			memusage.setOption(pieoption);
 			var avgload = echarts.init(document.getElementById('avgload'));
 			avgload.setOption(avgloadoption);
+			var ritovercount = echarts.init(document.getElementById('ritovercount'));
+			ritovercount.setOption(option);
+			var assignnum = echarts.init(document.getElementById('assignnum'));
+			assignnum.setOption(assignnumoption);
+			var bulkassignnum = echarts.init(document.getElementById('bulkassignnum'));
+			bulkassignnum.setOption(assignnumoption1);
+			var balanceassignnum = echarts.init(document.getElementById('balanceassignnum'));
+			balanceassignnum.setOption(assignnumoption);
+			var hlogsplittime = echarts.init(document.getElementById('hlogsplittime'));
+			hlogsplittime.setOption(hlogsplittimeoption);
 
 		});
 	});

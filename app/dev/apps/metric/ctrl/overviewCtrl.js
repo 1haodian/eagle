@@ -34,41 +34,42 @@
 
 
 			var labelTop = {
-				normal : {
-					label : {
-						show : true,
-						position : 'center',
-						formatter : '{b}',
+				normal: {
+					label: {
+						show: true,
+						position: 'center',
+						formatter: '{b}',
 						textStyle: {
-							baseline : 'bottom'
+							baseline: 'bottom'
 						}
 					},
-					labelLine : {
-						show : false
-					}
+					labelLine: {
+						show: false
+					},
+					color: "#1E90FF"
 				}
 			};
 			var labelFromatter = {
-				normal : {
-					label : {
-						formatter : function (params){
+				normal: {
+					label: {
+						formatter: function (params) {
 							return 100 - params.value + '%'
 						},
 						textStyle: {
-							baseline : 'top'
+							baseline: 'top'
 						}
 					}
-				},
-			}
+				}
+			};
 			var labelBottom = {
-				normal : {
+				normal: {
 					color: '#ccc',
-					label : {
-						show : true,
-						position : 'center'
+					label: {
+						show: true,
+						position: 'center'
 					},
-					labelLine : {
-						show : false
+					labelLine: {
+						show: false
 					}
 				},
 				emphasis: {
@@ -78,10 +79,10 @@
 			var radius = [40, 55];
 			var pieoption = {
 				legend: {
-					x : 'center',
-					y : 'center',
+					x: 'center',
+					y: 'center'
 				},
-				series : [
+				series: [
 					{
 						type: 'pie',
 						radius: radius,
@@ -94,13 +95,6 @@
 					}
 				]
 			};
-
-
-			//	var chart = echarts.init($element[0]);
-			var myChart = echarts.init(document.getElementById('main'));
-			var myChart1 = echarts.init(document.getElementById('main1'));
-			var myChart2 = echarts.init(document.getElementById('main2'));
-
 			var option = {
 				tooltip: {
 					show: true
@@ -128,9 +122,40 @@
 				]
 			};
 
-			myChart.setOption(option);
-			myChart1.setOption(pieoption);
-			myChart2.setOption(option);
+
+			avgloadoption = {
+				tooltip: {
+					trigger: 'axis'
+				},
+				calculable: true,
+				xAxis: [
+					{
+						type: 'category',
+						boundaryGap: false,
+						data: ['week1', 'week2', 'week3', 'week4']
+					}
+				],
+				yAxis: [
+					{
+						type: 'value'
+					}
+				],
+				series: [
+					{
+						name: 'load',
+						type: 'line',
+						smooth: true,
+						itemStyle: {normal: {areaStyle: {type: 'default'}, color: 'green'}},
+						data: [10, 80, 21, 54],
+					}
+				]
+			};
+			var ritcount = echarts.init(document.getElementById('ritcount'));
+			ritcount.setOption(option);
+			var memusage = echarts.init(document.getElementById('memusage'));
+			memusage.setOption(pieoption);
+			var avgload = echarts.init(document.getElementById('avgload'));
+			avgload.setOption(avgloadoption);
 
 		});
 	});

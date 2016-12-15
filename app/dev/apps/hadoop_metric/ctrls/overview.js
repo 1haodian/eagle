@@ -21,30 +21,43 @@
 	 * `register` without params will load the module which using require
 	 */
 	register(function (hadoopMetricApp) {
-		hadoopMetricApp.controller("overviewCtrl", function ($scope, PageConfig) {
+		hadoopMetricApp.controller("overviewCtrl", function ($q, $wrapState, $scope, PageConfig, METRIC) {
 			PageConfig.title = 'Overview';
 
+			var metric_heapMB;
+			var metricName = ['hadoop.memory.nonheapmemoryusage.used'];
+			metric_heapMB = METRIC.metrics({site: $wrapState.param.siteId}, metricName, 20);
 			$scope.commonOption = {};
+			var series_metric_heapMB
+
+			$q.all([metric_heapMB._promise]).then(function () {
+				$scope.metricList = [
+					mockMetric(metric_heapMB, 'name1', {}),
+					mockMetric(metric_heapMB,'name1', {}),
+					mockMetric(metric_heapMB,'name2', {smooth: true}),
+					mockMetric(metric_heapMB,'name3', {areaStyle: {normal: {}}}),
+					mockMetric(metric_heapMB,'name4', {type: 'bar'}),
+					mockMetric(metric_heapMB,'name1', {}, 2),
+					mockMetric(metric_heapMB,'name2', {smooth: true}, 2),
+					mockMetric(metric_heapMB,'name3', {areaStyle: {normal: {}}, stack: 'one'}, 2),
+					mockMetric(metric_heapMB,'name4', {type: 'bar', stack: 'one'}, 2),
+					mockMetric(metric_heapMB,'name1', {}, 3),
+					mockMetric(metric_heapMB,'name2', {smooth: true}, 3),
+					mockMetric(metric_heapMB,'name3', {areaStyle: {normal: {}}, stack: 'one'}, 3),
+					mockMetric(metric_heapMB,'name4', {type: 'bar', stack: 'one'}, 3)
+				]
+			})
 
 			// Mock series data
-			function mockMetric(name, option, count) {
+			function mockMetric(metric_heapMB, name, option, count) {
+
+				series_metric_heapMB = METRIC.metricsToSeries(name, metric_heapMB, option);
 				count = count || 1;
 				var now = +new Date();
 
 				var series = [];
-				for (var i = 0 ; i < count ; i += 1) {
-					var data = [];
-
-					for(var j = 0 ; j < 30 ; j += 1) {
-						data.push({x: now + j * 1000 * 60, y: Math.random() * 100});
-					}
-
-					series.push($.extend({
-						name: name + '_' + i,
-						type: 'line',
-						data: data,
-						showSymbol: false,
-					}, option));
+				for (var i = 0; i < count; i += 1) {
+					series.push(series_metric_heapMB);
 				}
 
 				return {
@@ -53,20 +66,8 @@
 				};
 			}
 
-			$scope.metricList = [
-				mockMetric('name1', {}),
-				mockMetric('name2', {smooth:true}),
-				mockMetric('name3', {areaStyle: {normal: {}}}),
-				mockMetric('name4', {type: 'bar'}),
-				mockMetric('name1', {}, 2),
-				mockMetric('name2', {smooth:true}, 2),
-				mockMetric('name3', {areaStyle: {normal: {}}, stack: 'one'}, 2),
-				mockMetric('name4', {type: 'bar', stack: 'one'}, 2),
-				mockMetric('name1', {}, 3),
-				mockMetric('name2', {smooth:true}, 3),
-				mockMetric('name3', {areaStyle: {normal: {}}, stack: 'one'}, 3),
-				mockMetric('name4', {type: 'bar', stack: 'one'}, 3),
-			];
+
 		});
 	});
 })();
+//# sourceURL=overview.js

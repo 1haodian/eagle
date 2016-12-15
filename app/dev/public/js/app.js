@@ -118,10 +118,10 @@ var app = {};
 				})
 				// ================================= Alerts =================================
 				.state('alertList', {
-					url: "/alerts",
+					url: "/alerts?startTime&endTime",
 					templateUrl: "partials/alert/list.html?_=" + window._TRS(),
 					controller: "alertListCtrl",
-					resolve: routeResolve()
+					resolve: routeResolve({ time: { autoRefresh: true } })
 				})
 				.state('policyList', {
 					url: "/policies",
@@ -256,12 +256,13 @@ var app = {};
 		// ======================================================================================
 		// =                                   Main Controller                                  =
 		// ======================================================================================
-		eagleApp.controller('MainCtrl', function ($scope, $wrapState, $urlRouter, PageConfig, Portal, Widget, Entity, Site, Application, UI, Time, Policy) {
+		eagleApp.controller('MainCtrl', function ($scope, $wrapState, $urlRouter, PageConfig, Portal, Widget, Entity, CompatibleEntity, Site, Application, UI, Time, Policy) {
 			window._WrapState = $scope.$wrapState = $wrapState;
 			window._PageConfig = $scope.PageConfig = PageConfig;
 			window._Portal = $scope.Portal = Portal;
 			window._Widget = $scope.Widget = Widget;
 			window._Entity = $scope.Entity = Entity;
+			window._CompatibleEntity = $scope.CompatibleEntity = CompatibleEntity;
 			window._Site = $scope.Site = Site;
 			window._Application = $scope.Application = Application;
 			window._UI = $scope.UI = UI;
@@ -325,6 +326,10 @@ var app = {};
 				$("#eagleStartTime").val(Time.format("startTime"));
 				$("#eagleEndTime").val(Time.format("endTime"));
 				$("#eagleTimeRangeMDL").modal();
+			};
+
+			$scope.updateTimeAutoRefresh = function () {
+				Time.autoRefresh = !Time.autoRefresh;
 			};
 
 			$scope.setLastDuration = function (hours) {

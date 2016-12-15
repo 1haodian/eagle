@@ -57,26 +57,15 @@
 		<!--li><a href="#statistic" data-toggle="tab">Statistic</a></li-->
 		<li class="active"><a href="#setting" data-toggle="tab" ng-click="setTab('setting')">Setting</a></li>
 		<li><a href="#assignments" data-toggle="tab" ng-click="setTab('assignments')">Assignments</a></li>
-		<li><a href="#alerts" data-toggle="tab" ng-click="setTab('alerts')">Alerts</a></li>
-		<li class="pull-right box-tools" ng-show="tab === 'alerts'">
-			<div class="btn-group">
-				<button class="btn btn-default btn-sm" ng-class="{active: displayType === 'raw'}"
-						tooltip-append-to-body="true" uib-tooltip="raw data" ng-click="displayType = 'raw'">
-					<i class="fa fa-keyboard-o"></i>
-				</button>
-				<button class="btn btn-default btn-sm" ng-class="{active: displayType === 'format'}"
-						tooltip-append-to-body="true" uib-tooltip="format data" ng-click="displayType = 'format'">
-					<i class="fa fa-list"></i>
-				</button>
-			</div>
-		</li>
+		<li><a href="#definition" data-toggle="tab" ng-click="setTab('definition')">Alert Definition</a></li>
+		<li><a href="#alerts" data-toggle="tab" ng-click="setTab('alerts')">Alert List</a></li>
 	</ul>
 	<div class="tab-content">
 		<div class="tab-pane active" id="setting">
 			<table class="table">
 				<tbody>
 					<tr>
-						<th>Parallelism Hint</th>
+						<th class="text-no-break">Parallelism Hint</th>
 						<td>{{policy.parallelismHint}}</td>
 					</tr>
 					<tr>
@@ -100,6 +89,7 @@
 							<ul class="no-margin">
 								<li ng-repeat="stream in policy.inputStreams track by $index">
 									{{stream}}
+									<a class="fa fa-plug" uib-tooltip="Click to view data source" ng-click="showDataSource(stream)"></a>
 								</li>
 							</ul>
 						</td>
@@ -128,10 +118,12 @@
 											{{publisher.name}}
 										</strong>
 									</span>
-									<p class="offset" ng-repeat="field in Policy.publisherTypes[publisher.type].displayFields track by $index">
-										<span>{{field}}:</span>
-										<span>{{publisher.properties[field]}}</span>
-									</p>
+									<ul>
+										<li class="offset" ng-repeat="field in Policy.publisherTypes[publisher.type].displayFields track by $index">
+											<span>{{field.name}}:</span>
+											<span>{{publisher.properties[field.name]}}</span>
+										</li>
+									</ul>
 								</li>
 							</ul>
 						</td>
@@ -143,8 +135,10 @@
 				</tbody>
 			</table>
 		</div>
+
 		<div class="tab-pane" id="statistic">statistic
 		</div>
+
 		<div class="tab-pane" id="assignments">
 			<table class="table">
 				<tbody>
@@ -172,35 +166,55 @@
 				</tbody>
 			</table>
 		</div>
+
+		<div class="tab-pane" id="definition">
+			<table class="table">
+				<tbody>
+					<tr>
+						<th width="15%">Category</th>
+						<td>{{policy.alertDefinition.category}}</td>
+					</tr>
+					<tr>
+						<th>Severity</th>
+						<td>
+							<span class="label label-{{Policy.getSeverityClass(policy.alertDefinition.severity)}}">
+								{{policy.alertDefinition.severity}}
+							</span>
+						</td>
+					</tr>
+					<tr>
+						<th>Alert Subject</th>
+						<td>{{policy.alertDefinition.subject}}</td>
+					</tr>
+					<tr>
+						<th>Alert Body</th>
+						<td><pre>{{policy.alertDefinition.body}}</pre></td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+
 		<div class="tab-pane" id="alerts">
 			<div sort-table="alertList">
 				<table class="table table-bordered">
 					<thead>
 					<tr>
-						<th sortpath="alertTimestamp" width="135">
+						<th sortpath="timestamp" width="135">
 							Alert Time
 							<span class="fa fa-refresh fa-spin no-animate" ng-show="!alertList._done || isSorting"></span>
 						</th>
-						<th>Alert Data</th>
+						<th>Alert Subject</th>
 						<th width="10"></th>
 					</tr>
 					</thead>
 					<tbody>
 					<tr>
-						<td>{{Time.format(item.alertTimestamp)}}</td>
+						<td>{{Time.format(item.timestamp)}}</td>
 						<td class="text-break">
-							<span ng-if="displayType === 'raw'" na-block="item.alertData"></span>
-							<div ng-if="displayType === 'format'" na-block="!!item.alertData">
-								<ul>
-									<li ng-repeat="(key, value) in item.alertData track by $index">
-										<strong>{{key}}:</strong>
-										{{value}}
-									</li>
-								</ul>
-							</div>
+							{{item.alertSubject}}
 						</td>
 						<td>
-							<a ui-sref="alertDetail({alertId: item.alertId})">Detail</a>
+							<a ui-sref="alertDetail({alertId: item.tags.alertId})">Detail</a>
 						</td>
 					</tr>
 					</tbody>

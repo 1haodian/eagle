@@ -39,6 +39,7 @@
 					"dev/public/js/services/widgetSrv.js",
 					"dev/public/js/services/wrapStateSrv.js",
 					"dev/public/js/services/entitySrv.js",
+					"dev/public/js/services/compatibleEntitySrv.js",
 					"dev/public/js/services/siteSrv.js",
 					"dev/public/js/services/applicationSrv.js",
 					"dev/public/js/services/uiSrv.js",

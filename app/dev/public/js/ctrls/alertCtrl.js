@@ -24,33 +24,59 @@
 	// ======================================================================================
 	// =                                        Alert                                       =
 	// ======================================================================================
-	eagleControllers.controller('alertListCtrl', function ($scope, $wrapState, $interval, PageConfig, Entity) {
+	eagleControllers.controller('alertListCtrl', function ($scope, $wrapState, PageConfig, CompatibleEntity, Time) {
 		PageConfig.title = "Alerts";
 
-		$scope.displayType = "raw";
-		$scope.alertList = Entity.queryMetadata("alerts", {size: 10000});
+		$scope.alertList = [];
+		$scope.loading = false;
+
+		function loadAlerts() {
+			$scope.loading = true;
+			var list = CompatibleEntity.query("LIST", {
+				query: "AlertService",
+				startTime: new Time('startTime'),
+				endTime: new Time('endTime')
+			});
+			list._then(function () {
+				$scope.alertList = list;
+				$scope.loading = false;
+			});
+		}
+		loadAlerts();
+
+		Time.onReload(loadAlerts, $scope);
 
 		// ================================================================
 		// =                             Sync                             =
 		// ================================================================
-		var refreshInterval = $interval($scope.alertList._refresh, 1000 * 10);
+		/* var refreshInterval = $interval($scope.alertList._refresh, 1000 * 10);
 		$scope.$on('$destroy', function() {
 			$interval.cancel(refreshInterval);
-		});
+		}); */
 	});
 
-	eagleControllers.controller('alertDetailCtrl', function ($scope, $wrapState, PageConfig, Entity) {
+	eagleControllers.controller('alertDetailCtrl', function ($sce, $scope, $wrapState, PageConfig, CompatibleEntity) {
 		PageConfig.title = "Alert Detail";
 
-		$scope.alertList = Entity.queryMetadata("alerts/" + encodeURIComponent($wrapState.param.alertId));
+		$scope.alertList = CompatibleEntity.query("LIST", {
+			query: "AlertService",
+			condition: { alertId: $wrapState.param.alertId }
+		});
 		$scope.alertList._then(function () {
 			$scope.alert = $scope.alertList[0];
+
 			if(!$scope.alert) {
 				$.dialog({
 					title: "OPS",
 					content: "Alert '" + $wrapState.param.alertId + "' not found!"
 				});
+				return;
 			}
+
+			$scope.alertBody = $sce.trustAsHtml(($scope.alert.alertBody + "")
+				.replace(/\\r/g, '\r')
+				.replace(/\\n/g, '\n')
+			);
 		});
 	});
 
@@ -114,7 +140,7 @@
 		};
 	});
 
-	eagleControllers.controller('policyDetailCtrl', function ($scope, $wrapState, $interval, PageConfig, Entity, Policy) {
+	eagleControllers.controller('policyDetailCtrl', function ($scope, $wrapState, $interval, PageConfig, Time, Entity, CompatibleEntity, Policy) {
 		PageConfig.title = "Policy";
 		PageConfig.subTitle = "Detail";
 		PageConfig.navPath = [
@@ -123,7 +149,6 @@
 		];
 
 		$scope.tab = "setting";
-		$scope.displayType = "raw";
 
 		$scope.setTab = function (tab) {
 			$scope.tab = tab;
@@ -166,7 +191,36 @@
 		}
 		updatePolicy();
 
-		$scope.alertList = Entity.queryMetadata("policies/" + encodeURIComponent($wrapState.param.name) + "/alerts", {size: 1000});
+		var streams = {};
+		Entity.queryMetadata("datasources")._then(function(res) {
+			var dataSources = {};
+			$.each(res.data, function (i, dataSource) {
+				dataSources[dataSource.name] = dataSource;
+			});
+
+			Entity.queryMetadata("streams")._then(function (res) {
+				$.each(res.data, function (i, stream) {
+					streams[stream.streamId] = stream;
+					stream.dataSource = dataSources[stream.dataSource];
+				});
+			});
+		});
+
+		$scope.showDataSource = function (stream) {
+			var dataSource = streams[stream].dataSource;
+			$.dialog({
+				title: dataSource.name,
+				content: $("<pre class='text-break'>").html(JSON.stringify(dataSource, null, "\t")),
+				size: "large"
+			});
+		};
+
+		$scope.alertList = CompatibleEntity.query("LIST", {
+			query: "AlertService",
+			condition: {policyId: $wrapState.param.name},
+			startTime: new Time().subtract(7, 'day'),
+			endTime: new Time()
+		});
 
 		$scope.deletePolicy = function() {
 			Policy.delete($scope.policy).then(function () {

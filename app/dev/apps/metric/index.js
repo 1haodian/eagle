@@ -20,24 +20,26 @@
 	/**
 	 * `register` is global function that for application to set up 'controller', 'service', 'directive', 'route' in Eagle
 	 */
-	var metricApp = register(['ngRoute', 'ngAnimate', 'ui.router', 'eagle.service']);
+	var hadoopMetricApp = register(['ngRoute', 'ngAnimate', 'ui.router', 'eagle.service']);
 
-    metricApp.route("HbaseOverview", {
-    		url: "/metric/hbase/overview?startTime&endTime",
-    		site: true,
-    		templateUrl: "partials/hbase/overview.html",
-    		controller: "overviewCtrl",
-    		resolve: { time: true }
-    	})
-	metricApp.portal({name: "Hbase Metric", icon: "taxi", list: [
-		{name: "HBASE", path: "/metric/hbase/overview"}
-	]}, true);
-
-	metricApp.service("METRIC", function ($q, $http, Time, Site, Application) {
-		var METRIC = window._METRIC = {};
-
-		return METRIC;
+	hadoopMetricApp.route("HadoopMetric", {
+		url: "/hadoopMetric/",
+		site: true,
+		templateUrl: "partials/overview.html",
+		controller: "overviewCtrl",
+	}).route("HadoopMetric_HDFS", {
+		url: "/hadoopMetric/hdfs",
+		site: true,
+		templateUrl: "partials/hdfs/index.html",
+		controller: "hdfsCtrl",
 	});
-	metricApp.requireCSS("style/index.css");
-	metricApp.require("ctrl/overviewCtrl.js");
+
+	hadoopMetricApp.portal({name: "Services", icon: "heartbeat", list: [
+		{name: "Overview", path: "hadoopMetric/"},
+		{name: "HDFS", path: "hadoopMetric/hdfs"},
+	]}, true);
+	hadoopMetricApp.requireCSS("style/index.css");
+	hadoopMetricApp.require("widgets/availabilityChart.js");
+	hadoopMetricApp.require("ctrls/overview.js");
+	hadoopMetricApp.require("ctrls/hdfs.js");
 })();

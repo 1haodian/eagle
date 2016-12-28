@@ -44,8 +44,8 @@
                 <exclude>org.slf4j:slf4j-log4j12</exclude>
                 <exclude>io.dropwizard:**</exclude>
                 <!--<exclude>com.sun.jersey:**</exclude>
-                <exclude>com.sun.jersey.contribs:**</exclude>
-                <exclude>org.apache.storm:storm-core</exclude>-->
+                <exclude>com.sun.jersey.contribs:**</exclude>-->
+                <exclude>org.apache.storm:storm-core</exclude>
             </excludes>
         </dependencySet>
     </dependencySets>

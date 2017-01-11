@@ -41,6 +41,7 @@ before_deploy:
   - export APACHE_LAST_COMMIT_HASH=$(git rev-list $YHD_FIRST_COMMIT_HASH^1 -1)
   - echo "deploying eagle-0.5.0-SNAPSHOT-bin-$APACHE_LAST_COMMIT_HASH.tar.gz to GitHub releases"
   - mv 'eagle-server-assembly/target/eagle-0.5.0-SNAPSHOT-bin.tar.gz' 'eagle-server-assembly/target/eagle-0.5.0-SNAPSHOT-bin-$APACHE_LAST_COMMIT_HASH.tar.gz'
+  - ls eagle-server-assembly/target
 deploy:
   provider: releases
   api_key: "${DLG_TOKEN}"

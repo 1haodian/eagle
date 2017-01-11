@@ -6,7 +6,7 @@ echo "${TRAVIS_EVENT_TYPE}"
 
 git clone https://github.com/1haodian/eagle.git eagle
 cd eagle
-git checkout master
+git checkout travis-ci 
 git status
 
 
@@ -25,7 +25,7 @@ echo "Rebase..."
 git rebase upstream/master 
 
 echo "Pushing with force ..."
-git push --force origin master > /dev/null 2>&1 || exit 1
+git push --force origin travis-ci  > /dev/null 2>&1 || exit 1
 echo "Pushed deployment successfully"
 
 exit 0

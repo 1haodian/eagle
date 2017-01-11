@@ -24,6 +24,7 @@ import kafka.serializer.Decoder
 import org.apache.spark.SparkException
 import org.apache.spark.internal.Logging
 import org.apache.spark.streaming.dstream._
+import org.apache.spark.streaming.kafka.EagleKafkaUtils.logInfo
 import org.apache.spark.streaming.kafka.KafkaCluster.LeaderOffset
 import org.apache.spark.streaming.scheduler.rate.RateEstimator
 import org.apache.spark.streaming.scheduler.{RateController, StreamInputInfo}
@@ -164,6 +165,7 @@ R: ClassTag](
   }
 
   override def compute(validTime: Time): Option[KafkaRDD[K, V, U, T, R]] = {
+    logInfo("DynamicTopicKafkaInputDStream compute")
     currentOffsets = topicAndPartitionHandler(currentOffsets)
     val untilOffsets = clamp(latestLeaderOffsets(maxRetries))
     val rdd = KafkaRDD[K, V, U, T, R](

@@ -18,16 +18,17 @@
 package org.apache.eagle.alert.engine.runner;
 
 
-import org.apache.commons.lang3.StringUtils;
-import org.apache.eagle.alert.coordination.model.*;
-import org.apache.eagle.alert.engine.coordinator.*;
-import org.apache.eagle.alert.engine.spark.function.*;
-import org.apache.eagle.alert.engine.spark.model.*;
-
-import kafka.common.TopicAndPartition;
+import com.clearspring.analytics.util.Lists;
+import com.google.common.collect.Sets;
 import com.typesafe.config.Config;
+import kafka.common.TopicAndPartition;
 import kafka.message.MessageAndMetadata;
 import kafka.serializer.StringDecoder;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.eagle.alert.coordination.model.*;
+import org.apache.eagle.alert.engine.coordinator.StreamDefinition;
+import org.apache.eagle.alert.engine.spark.function.*;
+import org.apache.eagle.alert.engine.spark.model.*;
 import org.apache.eagle.alert.engine.spark.partition.StreamRoutePartitioner;
 import org.apache.eagle.alert.service.IMetadataServiceClient;
 import org.apache.eagle.alert.service.MetadataServiceClientImpl;
@@ -46,16 +47,20 @@ import org.slf4j.LoggerFactory;
 import scala.Predef;
 import scala.Tuple2;
 import scala.collection.JavaConversions;
+import scala.collection.JavaConverters;
 
 import java.io.Serializable;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 
-public class UnitSparkTopologyRunner implements Serializable {
+/**
+ *  spark topology runner for multikafka
+ */
+public class UnitSparkTopologyRunner4MultiKafka implements Serializable {
 
     private static final long serialVersionUID = 381513979960046346L;
 
-    private static final Logger LOG = LoggerFactory.getLogger(UnitSparkTopologyRunner.class);
+    private static final Logger LOG = LoggerFactory.getLogger(UnitSparkTopologyRunner4MultiKafka.class);
     //kafka config
     private KafkaCluster kafkaCluster = null;
     private Map<String, String> kafkaParams = new HashMap<>();
@@ -95,7 +100,7 @@ public class UnitSparkTopologyRunner implements Serializable {
     private final Config config;
 
 
-    public UnitSparkTopologyRunner(Config config) {
+    public UnitSparkTopologyRunner4MultiKafka(Config config) {
 
         prepareKafkaConfig(config);
         prepareSparkConfig(config);
@@ -119,76 +124,6 @@ public class UnitSparkTopologyRunner implements Serializable {
         jssc.start();
         LOG.info("Spark Streaming is running");
         jssc.awaitTermination();
-    }
-
-    private JavaStreamingContext buildTopology(Config config, String checkpointDirectory) {
-
-        Set<String> topics = getTopicsByConfig(config); // 不会每次都调用
-        EagleKafkaUtils.fillInLatestOffsets(topics,
-                this.fromOffsets,
-                this.groupId,
-                this.kafkaCluster,
-                this.zkServers);
-
-        int windowDurations = config.getInt(WINDOW_DURATIONS_SECOND);
-        int slideDurations = config.getInt(SLIDE_DURATION_SECOND);
-        int numOfRouter = config.getInt(ROUTER_TASK_NUM);
-        int numOfAlertBolts = config.getInt(ALERT_TASK_NUM);
-        int numOfPublishTasks = config.getInt(PUBLISH_TASK_NUM);
-        long batchDuration = config.hasPath(BATCH_DURATION) ? config.getLong(BATCH_DURATION) : DEFAULT_BATCH_DURATION_SECOND;
-
-        @SuppressWarnings("unchecked")
-        Class<MessageAndMetadata<String, String>> streamClass =
-                (Class<MessageAndMetadata<String, String>>) (Class<?>) MessageAndMetadata.class;
-        JavaStreamingContext jssc = new JavaStreamingContext(sparkConf, Durations.seconds(batchDuration));
-        if (!StringUtils.isEmpty(checkpointDirectory)) {
-            jssc.checkpoint(checkpointDirectory);
-        }
-        // 每个窗口会执行InputDStream的compute方法，所以可以操作的地方就是inputDStream的compute方法
-        JavaInputDStream<MessageAndMetadata<String, String>> messages = EagleKafkaUtils.createDirectStream(jssc,
-                String.class,
-                String.class,
-                StringDecoder.class,
-                StringDecoder.class,
-                streamClass,
-                kafkaParams,
-                this.fromOffsets,
-                new RefreshTopicFunction(this.topicsRef, this.groupId, this.kafkaCluster, this.zkServers), message -> message);
-
-        WindowState winstate = new WindowState(jssc);
-        RouteState routeState = new RouteState(jssc);
-        PolicyState policyState = new PolicyState(jssc);
-        PublishState publishState = new PublishState(jssc);
-        SiddhiState siddhiState = new SiddhiState(jssc);
-
-
-        JavaPairDStream<String, String> pairDStream = messages
-                .transform(new ProcessSpecFunction(offsetRanges, // 重新获取topic并设置新的topicRef, offsetRange
-                        spoutSpecRef,
-                        sdsRef,
-                        alertBoltSpecRef,
-                        publishSpecRef,
-                        topicsRef,
-                        routerSpecRef,
-                        config,
-                        winstate,
-                        routeState,
-                        policyState,
-                        publishState,
-                        siddhiState,
-                        numOfAlertBolts))
-                .mapToPair((PairFunction<MessageAndMetadata<String, String>, String, String>) km -> new Tuple2<String, String>(km.topic(), km.message()));
-
-        pairDStream
-                .window(Durations.seconds(windowDurations), Durations.seconds(slideDurations))
-                .flatMapToPair(new CorrelationSpoutSparkFunction(numOfRouter, spoutSpecRef, sdsRef))
-                .groupByKey(new StreamRoutePartitioner(numOfRouter))
-                .mapPartitionsToPair(new StreamRouteBoltFunction("streamBolt", sdsRef, routerSpecRef, winstate, routeState))
-                .groupByKey(new StreamRoutePartitioner(numOfAlertBolts))
-                .mapPartitionsToPair(new AlertBoltFunction(sdsRef, alertBoltSpecRef, policyState, siddhiState, publishState))
-                .groupByKey(numOfPublishTasks)
-                .foreachRDD(new Publisher(alertPublishBoltName, kafkaCluster, groupId, offsetRanges, publishState, publishSpecRef, config));
-        return jssc;
     }
 
     private void prepareKafkaConfig(Config config) {
@@ -237,20 +172,73 @@ public class UnitSparkTopologyRunner implements Serializable {
         this.sparkConf = sparkConf;
     }
 
-    private Set<String> getTopicsByConfig(Config config) {
-        Set<String> topics = new HashSet<>();
-        List<Kafka2TupleMetadata> kafka2TupleMetadata = new ArrayList<>();
+    private JavaStreamingContext buildTopology(Config config, String checkpointDirectory) {
+        // 1. get kafka topic info from rest client
+        Map<String, Map<String, String>> kafkaInfos = getAllTopicsInfoByConfig(config);
+        Set<Map<KafkaCluster, Set<String>>> kafkaClusters = getKafkaClustersByKafkaInfo(kafkaInfos);
+        // 2. get offset for each kafka cluster
+        EagleKafkaUtils.fillInLatestOffsets(topics,
+            this.fromOffsets,
+            this.groupId,
+            this.kafkaCluster,
+            this.zkServers);
+
+        int windowDurations = config.getInt(WINDOW_DURATIONS_SECOND);
+        int slideDurations = config.getInt(SLIDE_DURATION_SECOND);
+        int numOfRouter = config.getInt(ROUTER_TASK_NUM);
+        int numOfAlertBolts = config.getInt(ALERT_TASK_NUM);
+        int numOfPublishTasks = config.getInt(PUBLISH_TASK_NUM);
+        long batchDuration = config.hasPath(BATCH_DURATION) ? config.getLong(BATCH_DURATION) : DEFAULT_BATCH_DURATION_SECOND;
+
+        @SuppressWarnings("unchecked")
+        Class<MessageAndMetadata<String, String>> streamClass =
+            (Class<MessageAndMetadata<String, String>>) (Class<?>) MessageAndMetadata.class;
+        JavaStreamingContext jssc = new JavaStreamingContext(sparkConf, Durations.seconds(batchDuration));
+        if (!StringUtils.isEmpty(checkpointDirectory)) {
+            jssc.checkpoint(checkpointDirectory);
+        }
+        // 3. get all kafka Dstream with refresh topic function
+        List<JavaInputDStream<MessageAndMetadata<String, String>>> inputDStreams = Lists.newArrayList();
+        for(){
+
+        }
+        // 4. union all kafka Dstream
+        // 5. build topology
+    }
+
+    /**
+     * build kafkaCluster with kafkainfo
+     * @param kafkaInfos
+     * @return
+     */
+    private Set<Map<KafkaCluster,Set<String>>> getKafkaClustersByKafkaInfo(Map<String, Map<String, String>> kafkaInfos) {
+        Set<Map<KafkaCluster,Set<String>>> clusters = Sets.newHashSet();
+        for (String topic : kafkaInfos.keySet()){
+            Map<String, String> kafkaProperties = kafkaInfos.get(topic);
+            KafkaCluster cluster = new KafkaCluster(JavaConverters.mapAsScalaMapConverter(kafkaProperties).asScala().toMap(
+                Predef.<Tuple2<String, String>>conforms()
+            ));
+        }
+    }
+
+    /**
+     * get kafka topic info
+     * @param config
+     * @return
+     */
+    private Map<String, Map<String, String>> getAllTopicsInfoByConfig(Config config){
+        Map<String, Map<String, String>> dataSourceProperties = new HashMap<>();
+        List<Kafka2TupleMetadata> kafka2TupleMetadataList = new ArrayList<>();
         try {
             LOG.info("get topics By config");
             IMetadataServiceClient client = new MetadataServiceClientImpl(config);
-            kafka2TupleMetadata = client.listDataSources();
+            kafka2TupleMetadataList = client.listDataSources();
         } catch (Exception e) {
             LOG.error("getTopicsByConfig error :" + e.getMessage(), e);
         }
-
-        for (Kafka2TupleMetadata eachKafka2TupleMetadata : kafka2TupleMetadata) {
-            topics.add(eachKafka2TupleMetadata.getTopic());
+        for (Kafka2TupleMetadata ds : kafka2TupleMetadataList) {
+            dataSourceProperties.put(ds.getTopic(), ds.getProperties());
         }
-        return topics;
+        return dataSourceProperties;
     }
 }

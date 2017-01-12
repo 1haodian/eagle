@@ -69,13 +69,12 @@ public class UnitSparkTopologyRunner4MultiKafka implements Serializable {
 
     private static final Logger LOG = LoggerFactory.getLogger(UnitSparkTopologyRunner4MultiKafka.class);
     //kafka config
-    private KafkaCluster kafkaCluster = null;
     private final AtomicReference<OffsetRange[]> offsetRanges = new AtomicReference<>();
     //common config
     private final AtomicReference<Map<String, StreamDefinition>> sdsRef = new AtomicReference<>();
     private final AtomicReference<SpoutSpec> spoutSpecRef = new AtomicReference<>();
     private final AtomicReference<AlertBoltSpec> alertBoltSpecRef = new AtomicReference<>();
-    private final AtomicReference<HashSet<String>> topicsRef = new AtomicReference<>();
+
     private final AtomicReference<RouterSpec> routerSpecRef = new AtomicReference<>();
     private final AtomicReference<PublishSpec> publishSpecRef = new AtomicReference<>();
     private String groupId;
@@ -192,7 +191,6 @@ public class UnitSparkTopologyRunner4MultiKafka implements Serializable {
             Map<TopicAndPartition, Long> fromOffsets = fromOffsetsClusterMap.get(kafkaClusterInfo);
             Map<String, String> kafkaParams = buildKafkaParam(kafkaClusterInfo.getBrokerList());
             AtomicReference<HashSet<String>> topicsRef = new AtomicReference<>();
-
             JavaInputDStream<MessageAndMetadata<String, String>> messages = EagleKafkaUtils.createDirectStream(jssc,
                 String.class,
                 String.class,
@@ -201,11 +199,52 @@ public class UnitSparkTopologyRunner4MultiKafka implements Serializable {
                 streamClass,
                 kafkaParams,
                 fromOffsets,
-                new RefreshTopicFunction(this.topicsRef, this.groupId, this.kafkaCluster, this.zkServers), message -> message );
-
+                new RefreshTopicFunction4MultiKafka(clusterInfoMap.get(kafkaClusterInfo),
+                        this.groupId,
+                        kafkaClusterInfo.getKafkaCluster(),
+                        kafkaClusterInfo.getZkQuorum()
+                ), message -> message );
+            inputDStreams.add(messages);
         }
         // 4. union all kafka Dstream
+        JavaInputDStream<MessageAndMetadata<String, String>> inputDStream = inputDStreams.get(0);
+        for(int i = 1; i< inputDStreams.size(); i++){
+            inputDStream.union(inputDStreams.get(i));
+        }
         // 5. build topology
+        WindowState winstate = new WindowState(jssc);
+        RouteState routeState = new RouteState(jssc);
+        PolicyState policyState = new PolicyState(jssc);
+        PublishState publishState = new PublishState(jssc);
+        SiddhiState siddhiState = new SiddhiState(jssc);
+
+        JavaPairDStream<String, String> pairDStream = inputDStream
+                .transform(new ProcessSpecFunction(offsetRanges, // 重新获取topic并设置新的topicRef, offsetRange
+                        spoutSpecRef,
+                        sdsRef,
+                        alertBoltSpecRef,
+                        publishSpecRef,
+                        topicsRef,
+                        routerSpecRef,
+                        config,
+                        winstate,
+                        routeState,
+                        policyState,
+                        publishState,
+                        siddhiState,
+                        numOfAlertBolts))
+                .mapToPair((PairFunction<MessageAndMetadata<String, String>, String, String>) km -> new Tuple2<String, String>(km.topic(), km.message()));
+
+        pairDStream
+                .window(Durations.seconds(windowDurations), Durations.seconds(slideDurations))
+                .flatMapToPair(new CorrelationSpoutSparkFunction(numOfRouter, spoutSpecRef, sdsRef))
+                .groupByKey(new StreamRoutePartitioner(numOfRouter))
+                .mapPartitionsToPair(new StreamRouteBoltFunction("streamBolt", sdsRef, routerSpecRef, winstate, routeState))
+                .groupByKey(new StreamRoutePartitioner(numOfAlertBolts))
+                .mapPartitionsToPair(new AlertBoltFunction(sdsRef, alertBoltSpecRef, policyState, siddhiState, publishState))
+                .groupByKey(numOfPublishTasks)
+                .foreachRDD(new Publisher(alertPublishBoltName, kafkaCluster, groupId, offsetRanges, publishState, publishSpecRef, config));
+        return jssc;
     }
 
     /**

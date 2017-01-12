@@ -48,7 +48,7 @@ import scala.reflect.ClassTag
   * and this DStream is not responsible for committing offsets,
   * so that you can control exactly-once semantics.
   * For an easy interface to Kafka-managed offsets,
-  * see {@link org.apache.spark.streaming.kafka.KafkaCluster}
+  * see {@link org.apache.spark.streaming.kafka.KafkaClusterInfo}
   *
   * @param kafkaParams    Kafka <a href="http://kafka.apache.org/documentation.html#configuration">
   *                       configuration parameters</a>.

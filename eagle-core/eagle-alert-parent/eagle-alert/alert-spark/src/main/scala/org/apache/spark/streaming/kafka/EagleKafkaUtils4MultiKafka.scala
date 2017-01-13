@@ -71,6 +71,7 @@ object EagleKafkaUtils4MultiKafka extends Logging {
     *                                 starting point of the stream
     * @param topicAndPartitionHandler Chang Map[TopicAndPartition, Long] dynamically to
     *                                 support add/remove topic without restart
+    * @param getOffsetRangeHandler get rdd offset
     * @param messageHandler           Function for translating each message and metadata into the desired type
     * @tparam K  type of Kafka message key
     * @tparam V  type of Kafka message value
@@ -89,12 +90,14 @@ object EagleKafkaUtils4MultiKafka extends Logging {
                 kafkaParams: Map[String, String],
                 fromOffsets: Map[TopicAndPartition, Long],
                 topicAndPartitionHandler: Map[TopicAndPartition, Long] => Map[TopicAndPartition, Long],
+                getOffsetRangeHandler: Array[OffsetRange] => Array[OffsetRange],
                 messageHandler: MessageAndMetadata[K, V] => R
               ): InputDStream[R] = {
     val cleanedHandler = ssc.sc.clean(messageHandler)
     val cleanedTopicAndPartitionHandler = ssc.sc.clean(topicAndPartitionHandler)
-    new DynamicTopicKafkaInputDStream[K, V, KD, VD, R](
-      ssc, kafkaParams, fromOffsets, cleanedTopicAndPartitionHandler, cleanedHandler)
+    val cleanedGetOffsetRangeHandler = ssc.sc.clean(getOffsetRangeHandler)
+    new DynamicTopicKafkaInputDStream4KafkaMultiKafka[K, V, KD, VD, R](
+      ssc, kafkaParams, fromOffsets, cleanedTopicAndPartitionHandler, cleanedGetOffsetRangeHandler, cleanedHandler)
   }
 
 
@@ -133,6 +136,7 @@ object EagleKafkaUtils4MultiKafka extends Logging {
     *                                 starting point of the stream
     * @param topicAndPartitionHandler Chang Map[TopicAndPartition, Long] dynamically to
     *                                 support add/remove topic without restart
+    * @param getOffsetRangeHandler get rdd offset
     * @param messageHandler           Function for translating each message and metadata into the desired type
     * @tparam K  type of Kafka message key
     * @tparam V  type of Kafka message value
@@ -151,6 +155,7 @@ object EagleKafkaUtils4MultiKafka extends Logging {
                                                                        kafkaParams: JMap[String, String],
                                                                        fromOffsets: JMap[TopicAndPartition, JLong],
                                                                        topicAndPartitionHandler: JFunction[Map[TopicAndPartition, Long], Map[TopicAndPartition, Long]],
+                                                                       getOffsetRangeHandler: JFunction[Array[OffsetRange], Array[OffsetRange]],
                                                                        messageHandler: JFunction[MessageAndMetadata[K, V], R]
                                                                      ): JavaInputDStream[R] = {
     implicit val keyCmt: ClassTag[K] = ClassTag(keyClass)
@@ -160,11 +165,13 @@ object EagleKafkaUtils4MultiKafka extends Logging {
     implicit val recordCmt: ClassTag[R] = ClassTag(recordClass)
     val cleanedHandler = jssc.sparkContext.clean(messageHandler.call _)
     val cleanedTopicAndPartitionHandler = jssc.sparkContext.clean(topicAndPartitionHandler.call _)
+    val cleanedGetOffsetRangeHandler = jssc.sparkContext.clean(getOffsetRangeHandler.call _)
     createDirectStreamWithHandler[K, V, KD, VD, R](
       jssc.ssc,
       Map(kafkaParams.asScala.toSeq: _*),
       Map(fromOffsets.asScala.mapValues(_.longValue()).toSeq: _*),
       cleanedTopicAndPartitionHandler,
+      cleanedGetOffsetRangeHandler,
       cleanedHandler
     )
   }

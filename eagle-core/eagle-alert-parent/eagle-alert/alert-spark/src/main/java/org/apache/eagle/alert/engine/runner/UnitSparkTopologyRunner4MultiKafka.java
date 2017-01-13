@@ -69,7 +69,7 @@ public class UnitSparkTopologyRunner4MultiKafka implements Serializable {
 
     private static final Logger LOG = LoggerFactory.getLogger(UnitSparkTopologyRunner4MultiKafka.class);
     //kafka config
-    private final AtomicReference<OffsetRange[]> offsetRanges = new AtomicReference<>();
+
     //common config
     private final AtomicReference<Map<String, StreamDefinition>> sdsRef = new AtomicReference<>();
     private final AtomicReference<SpoutSpec> spoutSpecRef = new AtomicReference<>();
@@ -77,7 +77,7 @@ public class UnitSparkTopologyRunner4MultiKafka implements Serializable {
 
     private final AtomicReference<RouterSpec> routerSpecRef = new AtomicReference<>();
     private final AtomicReference<PublishSpec> publishSpecRef = new AtomicReference<>();
-    private String groupId;
+    private static String groupId;
     //Zookeeper server string: host1:port1[,host2:port2,...]
     private String zkServers = null;
     //spark config
@@ -101,7 +101,8 @@ public class UnitSparkTopologyRunner4MultiKafka implements Serializable {
 
 
     private final AtomicReference<Map<KafkaClusterInfo,Set<String>>> clusterInfoRef = new AtomicReference<>();
-    private Map<KafkaClusterInfo, Map<TopicAndPartition, Long>> fromOffsetsClusterMap = new HashMap<>();
+    private Map<KafkaClusterInfo, Map<TopicAndPartition, Long>> fromOffsetsClusterMapRef = new HashMap<>();
+    private final AtomicReference<Map<KafkaClusterInfo, OffsetRange[]>> offsetRangesClusterMapRef = new AtomicReference<>();
 
     private SparkConf sparkConf;
 
@@ -113,7 +114,6 @@ public class UnitSparkTopologyRunner4MultiKafka implements Serializable {
         prepareKafkaConfig(config);
         prepareSparkConfig(config);
         this.config = config;
-        this.zkServers = config.getString("zkConfig.zkQuorum");
 
     }
 
@@ -166,9 +166,9 @@ public class UnitSparkTopologyRunner4MultiKafka implements Serializable {
     private JavaStreamingContext buildTopology(Config config, String checkpointDirectory) {
         // 1. get kafka topic info from rest client
         Map<String, Map<String, String>> kafkaInfos = getAllTopicsInfoByConfig(config);
-        getKafkaClustersByKafkaInfo(kafkaInfos);
+        clusterInfoRef.set(getKafkaClustersByKafkaInfo(kafkaInfos, new HashMap<>()));
         // 2. get offset for each kafka cluster
-        EagleKafkaUtils4MultiKafka.fillInLatestOffsetsByCluster(clusterInfoRef.get(),fromOffsetsClusterMap,groupId);
+        EagleKafkaUtils4MultiKafka.fillInLatestOffsetsByCluster(clusterInfoRef.get(),fromOffsetsClusterMapRef,groupId);
 
         int windowDurations = config.getInt(WINDOW_DURATIONS_SECOND);
         int slideDurations = config.getInt(SLIDE_DURATION_SECOND);
@@ -187,11 +187,14 @@ public class UnitSparkTopologyRunner4MultiKafka implements Serializable {
         // 3. get all kafka Dstream with refresh topic function
         List<JavaInputDStream<MessageAndMetadata<String, String>>> inputDStreams = Lists.newArrayList();
         Map<KafkaClusterInfo,Set<String>> clusterInfoMap = clusterInfoRef.get();
+        Map<KafkaClusterInfo, OffsetRange[]> offsetRangeMap = new HashMap<>();
+        offsetRangesClusterMapRef.set(offsetRangeMap);
         for(KafkaClusterInfo kafkaClusterInfo : clusterInfoMap.keySet()){
-            Map<TopicAndPartition, Long> fromOffsets = fromOffsetsClusterMap.get(kafkaClusterInfo);
+            Map<TopicAndPartition, Long> fromOffsets = fromOffsetsClusterMapRef.get(kafkaClusterInfo);
             Map<String, String> kafkaParams = buildKafkaParam(kafkaClusterInfo.getBrokerList());
             AtomicReference<HashSet<String>> topicsRef = new AtomicReference<>();
-            JavaInputDStream<MessageAndMetadata<String, String>> messages = EagleKafkaUtils.createDirectStream(jssc,
+            AtomicReference<OffsetRange[]> offsetRangesRef = new AtomicReference<>();
+            JavaInputDStream<MessageAndMetadata<String, String>> messages = EagleKafkaUtils4MultiKafka.createDirectStream(jssc,
                 String.class,
                 String.class,
                 StringDecoder.class,
@@ -203,7 +206,10 @@ public class UnitSparkTopologyRunner4MultiKafka implements Serializable {
                         this.groupId,
                         kafkaClusterInfo.getKafkaCluster(),
                         kafkaClusterInfo.getZkQuorum()
-                ), message -> message );
+                ),
+                new GetOffsetRangeFunction(offsetRangesRef),
+                message -> message );
+            offsetRangeMap.put(kafkaClusterInfo,offsetRangesRef.get());
             inputDStreams.add(messages);
         }
         // 4. union all kafka Dstream
@@ -219,12 +225,12 @@ public class UnitSparkTopologyRunner4MultiKafka implements Serializable {
         SiddhiState siddhiState = new SiddhiState(jssc);
 
         JavaPairDStream<String, String> pairDStream = inputDStream
-                .transform(new ProcessSpecFunction(offsetRanges, // 重新获取topic并设置新的topicRef, offsetRange
+                .transform(new ProcessSpecFunction4MultiKafka( // 重新获取topic并设置新的topicRef, offsetRange
                         spoutSpecRef,
                         sdsRef,
                         alertBoltSpecRef,
                         publishSpecRef,
-                        topicsRef,
+                        clusterInfoRef,
                         routerSpecRef,
                         config,
                         winstate,
@@ -243,7 +249,7 @@ public class UnitSparkTopologyRunner4MultiKafka implements Serializable {
                 .groupByKey(new StreamRoutePartitioner(numOfAlertBolts))
                 .mapPartitionsToPair(new AlertBoltFunction(sdsRef, alertBoltSpecRef, policyState, siddhiState, publishState))
                 .groupByKey(numOfPublishTasks)
-                .foreachRDD(new Publisher(alertPublishBoltName, kafkaCluster, groupId, offsetRanges, publishState, publishSpecRef, config));
+                .foreachRDD(new Publisher4MultiKafka(alertPublishBoltName, groupId, offsetRangesClusterMapRef, publishState, publishSpecRef, config));
         return jssc;
     }
 
@@ -251,26 +257,36 @@ public class UnitSparkTopologyRunner4MultiKafka implements Serializable {
      * build kafkaCluster with kafkainfo
      * @param kafkaInfos
      */
-    private void getKafkaClustersByKafkaInfo(Map<String, Map<String, String>> kafkaInfos) {
+    public static Map<KafkaClusterInfo,Set<String>> getKafkaClustersByKafkaInfo(Map<String, Map<String, String>> kafkaInfos,  Map<KafkaClusterInfo,Set<String>> cachedClusters) {
         Map<KafkaClusterInfo,Set<String>> clusters = Maps.newHashMap();
         for (String topic : kafkaInfos.keySet()){
             Map<String, String> kafkaProperties = kafkaInfos.get(topic);
-            KafkaClusterInfo clusterInfo = new KafkaClusterInfo(topic, kafkaProperties.get("spout.kafkaBrokerZkQuorum"));
+            String kafkaBrokerZkQuorum = kafkaProperties.get("spout.kafkaBrokerZkQuorum");
+            if(StringUtils.isEmpty(kafkaBrokerZkQuorum)){
+                continue;
+            }
+            final KafkaClusterInfo clusterInfo = new KafkaClusterInfo(topic, kafkaProperties.get("spout.kafkaBrokerZkQuorum"));
             Set<String> clusterTopics = clusters.get(clusterInfo);
             if(CollectionUtils.isNotEmpty(clusterTopics)){
                 clusterTopics.add(topic);
             }else{
-                String brokerList = listKafkaBrokersByZk(kafkaProperties.get("spout.kafkaBrokerZkQuorum"), kafkaProperties.get("spout.kafkaBrokerZkBasePath"));
-                clusterInfo.setBrokerList(brokerList);
-                Map<String, String> kafkaParam = buildKafkaParam(brokerList);
-                KafkaCluster cluster = new KafkaCluster(JavaConverters.mapAsScalaMapConverter(kafkaParam).asScala().toMap(
-                    Predef.<Tuple2<String, String>>conforms()
-                ));
-                clusterInfo.setKafkaCluster(cluster);
-                clusters.put(clusterInfo, Sets.newHashSet());
+                Optional<KafkaClusterInfo> cachedCluster = cachedClusters.keySet().stream().filter(item -> item.equals(clusterInfo)).findFirst();
+                if(cachedCluster.isPresent()){
+                    clusters.put(cachedCluster.get(), Sets.newHashSet(topic));
+                }else{
+                    String brokerList = listKafkaBrokersByZk(kafkaProperties.get("spout.kafkaBrokerZkQuorum"), kafkaProperties.get("spout.kafkaBrokerZkBasePath"));
+                    clusterInfo.setBrokerList(brokerList);
+                    Map<String, String> kafkaParam = buildKafkaParam(brokerList);
+                    KafkaCluster cluster = new KafkaCluster(JavaConverters.mapAsScalaMapConverter(kafkaParam).asScala().toMap(
+                        Predef.<Tuple2<String, String>>conforms()
+                    ));
+                    clusterInfo.setKafkaCluster(cluster);
+                    clusters.put(clusterInfo, Sets.newHashSet(topic));
+                }
+
             }
         }
-        clusterInfoRef.set(clusters);
+        return clusters;
     }
 
     /**
@@ -294,27 +310,32 @@ public class UnitSparkTopologyRunner4MultiKafka implements Serializable {
         return dataSourceProperties;
     }
 
-    private String listKafkaBrokersByZk(String kafkaBrokerZkQuorum, String kafkaBrokerZkPath) {
+    private static String listKafkaBrokersByZk(String kafkaBrokerZkQuorum, String kafkaBrokerZkPath) {
         Set<String> brokerList = Sets.newHashSet();
         ZooKeeper zk = null; // curator
         try {
             zk = new ZooKeeper(kafkaBrokerZkQuorum, 1000, null);
-            List<String> ids = zk.getChildren(kafkaBrokerZkPath, false);
+            List<String> ids = zk.getChildren(kafkaBrokerZkPath + "/ids", false);
             for (String id : ids) {
-                Map e = (Map) JSONValue.parse(new String(zk.getData("kafkaBrokerZkPath" + id, false, null), "UTF-8"));
+                Map e = (Map) JSONValue.parse(new String(zk.getData("kafkaBrokerZkPath" + "/ids" + id, false, null), "UTF-8"));
                 String host = (String)e.get("host");
                 Integer port = Integer.valueOf(((Long)e.get("port")).intValue());
                 brokerList.add(host + ":" + port);
             }
         } catch (Exception e) {
             LOG.error("listKafkaBrokersByZk error :" + e.getMessage(), e);
+        }finally {
+            try {
+                zk.close();
+            } catch (InterruptedException e) {
+            }
         }
         return String.join("," , brokerList);
     }
 
-    private Map<String, String> buildKafkaParam(String brokerList){
+    private static Map<String, String> buildKafkaParam(String brokerList){
         Map<String, String> kafkaParam = Maps.newHashMap();
-        kafkaParam.put("group.id", this.groupId);
+        kafkaParam.put("group.id", groupId);
         kafkaParam.put("auto.offset.reset", "largest");
         kafkaParam.put("metadata.broker.list", brokerList);
         // Newer version of metadata.broker.list:

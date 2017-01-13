@@ -35,9 +35,7 @@ echo -e "Starting to tag commit.\n"
 # Add tag and push to master.
 
 git tag -a eagle-$TRAVIS_BRANCH -m "Travis build $TRAVIS_BRANCH pushed a tag."
-
 git push origin --tags
-
 git fetch origin
 
 echo -e "Done magic with tags.\n"

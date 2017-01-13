@@ -39,9 +39,6 @@ notifications:
 before_deploy:
   - export YHD_FIRST_COMMIT_HASH=$(git rev-list travis-ci --committer=Travis-CI --pretty=format:"%H" |tail -1)
   - export APACHE_LAST_COMMIT_HASH=$(git rev-list $YHD_FIRST_COMMIT_HASH^1 -1)
-  - export GIT_TAG=$TRAVIS_BRANCH
-  - git tag $GIT_TAG -a -m "Generated tag from TravisCI for build $TRAVIS_BRANCH"
-  - git push --tags
   - echo "deploying eagle-0.5.0-SNAPSHOT-bin-$APACHE_LAST_COMMIT_HASH.tar.gz to GitHub releases"
   - mv eagle-server-assembly/target/eagle-0.5.0-SNAPSHOT-bin.tar.gz eagle-server-assembly/target/eagle-0.5.0-SNAPSHOT-bin-$APACHE_LAST_COMMIT_HASH.tar.gz
   - ls eagle-server-assembly/target

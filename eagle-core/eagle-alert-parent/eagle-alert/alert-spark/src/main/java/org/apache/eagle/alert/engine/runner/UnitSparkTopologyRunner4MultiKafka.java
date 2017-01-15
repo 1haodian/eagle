@@ -187,8 +187,6 @@ public class UnitSparkTopologyRunner4MultiKafka implements Serializable {
         // 3. get all kafka Dstream with refresh topic function
         List<JavaInputDStream<MessageAndMetadata<String, String>>> inputDStreams = Lists.newArrayList();
         Map<KafkaClusterInfo,Set<String>> clusterInfoMap = clusterInfoRef.get();
-        Map<KafkaClusterInfo, OffsetRange[]> offsetRangeMap = new HashMap<>();
-        offsetRangesClusterMapRef.set(offsetRangeMap);
         for(KafkaClusterInfo kafkaClusterInfo : clusterInfoMap.keySet()){
             Map<TopicAndPartition, Long> fromOffsets = fromOffsetsClusterMapRef.get(kafkaClusterInfo);
             Map<String, String> kafkaParams = buildKafkaParam(kafkaClusterInfo.getBrokerList());
@@ -207,9 +205,8 @@ public class UnitSparkTopologyRunner4MultiKafka implements Serializable {
                         kafkaClusterInfo.getKafkaCluster(),
                         kafkaClusterInfo.getZkQuorum()
                 ),
-                new GetOffsetRangeFunction(offsetRangesRef),
+                new GetOffsetRangeFunction(offsetRangesClusterMapRef,clusterInfoRef),
                 message -> message );
-            offsetRangeMap.put(kafkaClusterInfo,offsetRangesRef.get());
             inputDStreams.add(messages);
         }
         // 4. union all kafka Dstream
@@ -262,10 +259,11 @@ public class UnitSparkTopologyRunner4MultiKafka implements Serializable {
         for (String topic : kafkaInfos.keySet()){
             Map<String, String> kafkaProperties = kafkaInfos.get(topic);
             String kafkaBrokerZkQuorum = kafkaProperties.get("spout.kafkaBrokerZkQuorum");
-            if(StringUtils.isEmpty(kafkaBrokerZkQuorum)){
+            String kafkaBrokerPathQuorum = kafkaProperties.get("spout.kafkaBrokerZkBasePath");
+            if(StringUtils.isEmpty(kafkaBrokerZkQuorum) || StringUtils.isEmpty(kafkaBrokerPathQuorum)){
                 continue;
             }
-            final KafkaClusterInfo clusterInfo = new KafkaClusterInfo(topic, kafkaProperties.get("spout.kafkaBrokerZkQuorum"));
+            final KafkaClusterInfo clusterInfo = new KafkaClusterInfo(topic, kafkaBrokerZkQuorum);
             Set<String> clusterTopics = clusters.get(clusterInfo);
             if(CollectionUtils.isNotEmpty(clusterTopics)){
                 clusterTopics.add(topic);
@@ -274,7 +272,7 @@ public class UnitSparkTopologyRunner4MultiKafka implements Serializable {
                 if(cachedCluster.isPresent()){
                     clusters.put(cachedCluster.get(), Sets.newHashSet(topic));
                 }else{
-                    String brokerList = listKafkaBrokersByZk(kafkaProperties.get("spout.kafkaBrokerZkQuorum"), kafkaProperties.get("spout.kafkaBrokerZkBasePath"));
+                    String brokerList = listKafkaBrokersByZk(kafkaBrokerZkQuorum, kafkaBrokerPathQuorum);
                     clusterInfo.setBrokerList(brokerList);
                     Map<String, String> kafkaParam = buildKafkaParam(brokerList);
                     KafkaCluster cluster = new KafkaCluster(JavaConverters.mapAsScalaMapConverter(kafkaParam).asScala().toMap(
@@ -305,6 +303,7 @@ public class UnitSparkTopologyRunner4MultiKafka implements Serializable {
             LOG.error("getTopicsByConfig error :" + e.getMessage(), e);
         }
         for (Kafka2TupleMetadata ds : kafka2TupleMetadataList) {
+            ds.getProperties().put("spout.kafkaBrokerZkQuorum", "localhost:2181");
             dataSourceProperties.put(ds.getTopic(), ds.getProperties());
         }
         return dataSourceProperties;
@@ -317,7 +316,7 @@ public class UnitSparkTopologyRunner4MultiKafka implements Serializable {
             zk = new ZooKeeper(kafkaBrokerZkQuorum, 1000, null);
             List<String> ids = zk.getChildren(kafkaBrokerZkPath + "/ids", false);
             for (String id : ids) {
-                Map e = (Map) JSONValue.parse(new String(zk.getData("kafkaBrokerZkPath" + "/ids" + id, false, null), "UTF-8"));
+                Map e = (Map) JSONValue.parse(new String(zk.getData(kafkaBrokerZkPath + "/ids/" + id, false, null), "UTF-8"));
                 String host = (String)e.get("host");
                 Integer port = Integer.valueOf(((Long)e.get("port")).intValue());
                 brokerList.add(host + ":" + port);

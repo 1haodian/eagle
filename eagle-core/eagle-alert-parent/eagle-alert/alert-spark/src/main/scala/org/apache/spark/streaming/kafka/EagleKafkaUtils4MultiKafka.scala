@@ -28,7 +28,7 @@ import kafka.message.MessageAndMetadata
 import kafka.serializer.Decoder
 import org.I0Itec.zkclient.ZkClient
 import org.apache.eagle.alert.engine.spark.model.KafkaClusterInfo
-import org.apache.spark.api.java.function.{Function => JFunction}
+import org.apache.spark.api.java.function.{Function => JFunction, Function2 => JFunction2}
 import org.apache.spark.internal.Logging
 import org.apache.spark.streaming.StreamingContext
 import org.apache.spark.streaming.api.java._
@@ -90,7 +90,7 @@ object EagleKafkaUtils4MultiKafka extends Logging {
                 kafkaParams: Map[String, String],
                 fromOffsets: Map[TopicAndPartition, Long],
                 topicAndPartitionHandler: Map[TopicAndPartition, Long] => Map[TopicAndPartition, Long],
-                getOffsetRangeHandler: Array[OffsetRange] => Array[OffsetRange],
+                getOffsetRangeHandler: (Array[OffsetRange], Map[String, String]) => Array[OffsetRange],
                 messageHandler: MessageAndMetadata[K, V] => R
               ): InputDStream[R] = {
     val cleanedHandler = ssc.sc.clean(messageHandler)
@@ -155,7 +155,7 @@ object EagleKafkaUtils4MultiKafka extends Logging {
                                                                        kafkaParams: JMap[String, String],
                                                                        fromOffsets: JMap[TopicAndPartition, JLong],
                                                                        topicAndPartitionHandler: JFunction[Map[TopicAndPartition, Long], Map[TopicAndPartition, Long]],
-                                                                       getOffsetRangeHandler: JFunction[Array[OffsetRange], Array[OffsetRange]],
+                                                                       getOffsetRangeHandler: JFunction2[Array[OffsetRange], Map[String, String], Array[OffsetRange]],
                                                                        messageHandler: JFunction[MessageAndMetadata[K, V], R]
                                                                      ): JavaInputDStream[R] = {
     implicit val keyCmt: ClassTag[K] = ClassTag(keyClass)

@@ -71,7 +71,7 @@ R: ClassTag](
               val kafkaParams: Map[String, String],
               val fromOffsets: Map[TopicAndPartition, Long],
               topicAndPartitionHandler: Map[TopicAndPartition, Long] => Map[TopicAndPartition, Long],
-              getOffsetRangeHandler: Array[OffsetRange] => Array[OffsetRange],
+              getOffsetRangeHandler: (Array[OffsetRange], Map[String, String]) => Array[OffsetRange],
               messageHandler: MessageAndMetadata[K, V] => R
             ) extends InputDStream[R](_ssc) with Logging {
   val maxRetries = context.sparkContext.getConf.getInt(
@@ -191,7 +191,7 @@ R: ClassTag](
     val inputInfo = StreamInputInfo(id, rdd.count, metadata)
     ssc.scheduler.inputInfoTracker.reportInfo(validTime, inputInfo)
     currentOffsets = untilOffsets.map(kv => kv._1 -> kv._2.offset)
-    getOffsetRangeHandler(rdd.offsetRanges)
+    getOffsetRangeHandler(rdd.offsetRanges, kafkaParams)
     Some(rdd)
   }
 

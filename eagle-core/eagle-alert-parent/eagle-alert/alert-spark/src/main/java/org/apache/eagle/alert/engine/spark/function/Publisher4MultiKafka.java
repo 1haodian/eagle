@@ -70,19 +70,21 @@ public class Publisher4MultiKafka implements VoidFunction<JavaPairRDD<PublishPar
         for (KafkaClusterInfo kafkaClusterInfo : offsetRangesClusterMap.keySet()) {
             OffsetRange[] offsetRanges = offsetRangesClusterMap.get(kafkaClusterInfo);
             KafkaCluster kafkaCluster = kafkaClusterInfo.getKafkaCluster();
-            for (OffsetRange offsetRange : offsetRanges) {
-                TopicAndPartition topicAndPartition = new TopicAndPartition(offsetRange.topic(), offsetRange.partition());
-                Map<TopicAndPartition, Object> topicAndPartitionObjectMap = new HashMap<>();
-                topicAndPartitionObjectMap.put(topicAndPartition, offsetRange.untilOffset());
-                scala.collection.mutable.Map<TopicAndPartition, Object> map = JavaConversions.mapAsScalaMap(topicAndPartitionObjectMap);
-                scala.collection.immutable.Map<TopicAndPartition, Object> scalatopicAndPartitionObjectMap =
-                    map.toMap(new Predef.$less$colon$less<Tuple2<TopicAndPartition, Object>, Tuple2<TopicAndPartition, Object>>() {
-                        public Tuple2<TopicAndPartition, Object> apply(Tuple2<TopicAndPartition, Object> v1) {
-                            return v1;
-                        }
-                    });
-                LOG.info("Updating offsets: {}", scalatopicAndPartitionObjectMap);
-                kafkaCluster.setConsumerOffsets(groupId, scalatopicAndPartitionObjectMap);
+            if(offsetRanges != null) {
+                for (OffsetRange offsetRange : offsetRanges) {
+                    TopicAndPartition topicAndPartition = new TopicAndPartition(offsetRange.topic(), offsetRange.partition());
+                    Map<TopicAndPartition, Object> topicAndPartitionObjectMap = new HashMap<>();
+                    topicAndPartitionObjectMap.put(topicAndPartition, offsetRange.untilOffset());
+                    scala.collection.mutable.Map<TopicAndPartition, Object> map = JavaConversions.mapAsScalaMap(topicAndPartitionObjectMap);
+                    scala.collection.immutable.Map<TopicAndPartition, Object> scalatopicAndPartitionObjectMap =
+                            map.toMap(new Predef.$less$colon$less<Tuple2<TopicAndPartition, Object>, Tuple2<TopicAndPartition, Object>>() {
+                                public Tuple2<TopicAndPartition, Object> apply(Tuple2<TopicAndPartition, Object> v1) {
+                                    return v1;
+                                }
+                            });
+                    LOG.info("Updating offsets: {}", scalatopicAndPartitionObjectMap);
+                    kafkaCluster.setConsumerOffsets(groupId, scalatopicAndPartitionObjectMap);
+                }
             }
         }
     }

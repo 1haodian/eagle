@@ -2,12 +2,13 @@ package org.apache.eagle.alert.engine.spark.model;
 
 import org.apache.spark.streaming.kafka.KafkaCluster;
 
+import java.io.Serializable;
 import java.util.Arrays;
 
 /**
  * Created by koone on 2017/1/11.
  */
-public class KafkaClusterInfo {
+public class KafkaClusterInfo implements Serializable {
     private String topic;
     private String zkQuorum;
     private String brokerList;
@@ -77,8 +78,11 @@ public class KafkaClusterInfo {
         // int result = topic.hashCode();
         String[] zkQuorumArray =zkQuorum.split(",");
         Arrays.sort(zkQuorumArray);
-        // result = 31 * result + zkQuorumArray.hashCode();
-        return zkQuorumArray.hashCode();
+        int result = 0;
+        for(String zkQuorum : zkQuorumArray){
+            result = 31 * result + zkQuorum.hashCode();
+        }
+        return result;
     }
 
 }

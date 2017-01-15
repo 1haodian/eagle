@@ -17,8 +17,11 @@
 
 package org.apache.eagle.alert.engine.spark.function;
 
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.typesafe.config.Config;
 import kafka.message.MessageAndMetadata;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.eagle.alert.coordination.model.AlertBoltSpec;
 import org.apache.eagle.alert.coordination.model.PublishSpec;
 import org.apache.eagle.alert.coordination.model.RouterSpec;
@@ -28,6 +31,7 @@ import org.apache.eagle.alert.engine.spark.manager.SpecManager;
 import org.apache.eagle.alert.engine.spark.model.*;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.function.Function;
+import org.apache.spark.api.java.function.Function2;
 import org.apache.spark.streaming.kafka.HasOffsetRanges;
 import org.apache.spark.streaming.kafka.KafkaRDD;
 import org.apache.spark.streaming.kafka.OffsetRange;
@@ -36,26 +40,44 @@ import org.slf4j.LoggerFactory;
 import scala.Array;
 import scala.collection.JavaConversions;
 
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 
 
-public class GetOffsetRangeFunction implements Function<OffsetRange[], OffsetRange[]> {
+public class GetOffsetRangeFunction implements Function2<OffsetRange[], scala.collection.immutable.Map<String, String>, OffsetRange[]> {
+
 
     private static final Logger LOG = LoggerFactory.getLogger(GetOffsetRangeFunction.class);
-    private AtomicReference<OffsetRange[]> offsetRangesRef;
+    private AtomicReference<Map<KafkaClusterInfo, OffsetRange[]>> offsetRangesClusterMapRef;
+    private AtomicReference<Map<KafkaClusterInfo,Set<String>>> clusterInfoRef;
 
-    public GetOffsetRangeFunction(AtomicReference<OffsetRange[]> offsetRangesRef) {
-        this.offsetRangesRef = offsetRangesRef;
+    public GetOffsetRangeFunction(AtomicReference<Map<KafkaClusterInfo, OffsetRange[]>> offsetRangesClusterMapRef,
+                                  AtomicReference<Map<KafkaClusterInfo,Set<String>>> clusterInfoRef) {
+        this.offsetRangesClusterMapRef = offsetRangesClusterMapRef;
+        this.clusterInfoRef = clusterInfoRef;
     }
 
     @Override
-    public OffsetRange[] call(OffsetRange[] offsetRangeArray) throws Exception {
-        offsetRangesRef.set(offsetRangeArray);
-        return offsetRangeArray;
+    public OffsetRange[] call(OffsetRange[] offsetRanges, scala.collection.immutable.Map<String, String> kafkaParam) throws Exception {
+        Map<KafkaClusterInfo, OffsetRange[]> offsetRangeMap = offsetRangesClusterMapRef.get();
+        if(offsetRangeMap == null){
+            offsetRangeMap = Maps.newHashMap();
+        }
+        Map<String, String> kafkaParamJavaMap = JavaConversions.mapAsJavaMap(kafkaParam);
+        String kafkaBrokerZkQuorum = kafkaParamJavaMap.get("spout.kafkaBrokerZkQuorum");
+        String kafkaBrokerPathQuorum = kafkaParamJavaMap.get("spout.kafkaBrokerZkBasePath");
+        if(StringUtils.isEmpty(kafkaBrokerZkQuorum) || StringUtils.isEmpty(kafkaBrokerPathQuorum)){
+            LOG.warn("get offset from rdd, but kafka parm is not enough");
+        }else{
+            KafkaClusterInfo clusterInfo = new KafkaClusterInfo("", kafkaBrokerZkQuorum);
+            Optional<KafkaClusterInfo> cachedCluster = clusterInfoRef.get().keySet().stream().filter(item -> item.equals(clusterInfo)).findFirst();
+            if(cachedCluster.isPresent()){
+                offsetRangeMap.put(cachedCluster.get(),offsetRanges);
+            }else{
+                offsetRangeMap.put(clusterInfo, offsetRanges);
+            }
+        }
+        offsetRangesClusterMapRef.set(offsetRangeMap);
+        return offsetRanges;
     }
-
 }

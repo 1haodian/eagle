@@ -24,7 +24,6 @@ import kafka.serializer.Decoder
 import org.apache.spark.SparkException
 import org.apache.spark.internal.Logging
 import org.apache.spark.streaming.dstream._
-import org.apache.spark.streaming.kafka.EagleKafkaUtils.logInfo
 import org.apache.spark.streaming.kafka.KafkaCluster.LeaderOffset
 import org.apache.spark.streaming.scheduler.rate.RateEstimator
 import org.apache.spark.streaming.scheduler.{RateController, StreamInputInfo}
@@ -48,7 +47,7 @@ import scala.reflect.ClassTag
   * and this DStream is not responsible for committing offsets,
   * so that you can control exactly-once semantics.
   * For an easy interface to Kafka-managed offsets,
-  * see {@link org.apache.spark.streaming.kafka.KafkaClusterInfo}
+  * see {@link org.apache.spark.streaming.kafka.KafkaCluster}
   *
   * @param kafkaParams    Kafka <a href="http://kafka.apache.org/documentation.html#configuration">
   *                       configuration parameters</a>.
@@ -165,7 +164,6 @@ R: ClassTag](
   }
 
   override def compute(validTime: Time): Option[KafkaRDD[K, V, U, T, R]] = {
-    logInfo("DynamicTopicKafkaInputDStream compute")
     currentOffsets = topicAndPartitionHandler(currentOffsets)
     val untilOffsets = clamp(latestLeaderOffsets(maxRetries))
     val rdd = KafkaRDD[K, V, U, T, R](

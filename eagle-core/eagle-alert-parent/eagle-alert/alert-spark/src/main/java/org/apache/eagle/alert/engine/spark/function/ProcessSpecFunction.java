@@ -28,9 +28,7 @@ import org.apache.eagle.alert.engine.spark.manager.SpecManager;
 import org.apache.eagle.alert.engine.spark.model.*;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.function.Function;
-import org.apache.spark.rdd.RDD;
 import org.apache.spark.streaming.kafka.HasOffsetRanges;
-import org.apache.spark.streaming.kafka.KafkaRDD;
 import org.apache.spark.streaming.kafka.OffsetRange;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -122,7 +120,6 @@ public class ProcessSpecFunction implements Function<JavaRDD<MessageAndMetadata<
     }
 
     private void updateOffsetRanges(JavaRDD<MessageAndMetadata<String, String>> rdd) {
-        KafkaRDD rddkafka = (KafkaRDD) rdd.rdd();
         OffsetRange[] offsets = ((HasOffsetRanges) rdd.rdd()).offsetRanges();
         offsetRanges.set(offsets);
     }

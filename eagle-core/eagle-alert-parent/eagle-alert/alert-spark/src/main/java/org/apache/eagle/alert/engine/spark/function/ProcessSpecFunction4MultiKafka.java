@@ -97,7 +97,7 @@ public class ProcessSpecFunction4MultiKafka implements Function<JavaRDD<MessageA
         publishSpecRef.set(specManager.generatePublishSpec());
         routerSpecRef.set(specManager.generateRouterSpec());
 
-        reloadCluster(spoutSpec);
+        // reloadCluster(spoutSpec);
         recoverState();
 
         return rdd;
@@ -121,7 +121,7 @@ public class ProcessSpecFunction4MultiKafka implements Function<JavaRDD<MessageA
         Map<String, Map<String, String>> dataSourceProperties = new HashMap<>();
         Collection<Kafka2TupleMetadata> kafka2TupleMetadataList = spoutSpec.getKafka2TupleMetadataMap().values();
         for (Kafka2TupleMetadata ds : kafka2TupleMetadataList) {
-            ds.getProperties().put("spout.kafkaBrokerZkQuorum", "localhost:2181");
+            //ds.getProperties().put("spout.kafkaBrokerZkQuorum", "localhost:2181");
             dataSourceProperties.put(ds.getTopic(), ds.getProperties());
         }
         Map<KafkaClusterInfo, Set<String>> newClusterInfo = UnitSparkTopologyRunner4MultiKafka.getKafkaClustersByKafkaInfo(dataSourceProperties, clusterInfoRef.get());

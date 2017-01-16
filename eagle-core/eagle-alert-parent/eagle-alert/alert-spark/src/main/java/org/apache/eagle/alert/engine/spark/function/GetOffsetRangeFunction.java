@@ -65,8 +65,7 @@ public class GetOffsetRangeFunction implements Function2<OffsetRange[], scala.co
         }
         Map<String, String> kafkaParamJavaMap = JavaConversions.mapAsJavaMap(kafkaParam);
         String kafkaBrokerZkQuorum = kafkaParamJavaMap.get("spout.kafkaBrokerZkQuorum");
-        String kafkaBrokerPathQuorum = kafkaParamJavaMap.get("spout.kafkaBrokerZkBasePath");
-        if(StringUtils.isEmpty(kafkaBrokerZkQuorum) || StringUtils.isEmpty(kafkaBrokerPathQuorum)){
+        if(StringUtils.isEmpty(kafkaBrokerZkQuorum)){
             LOG.warn("get offset from rdd, but kafka parm is not enough");
         }else{
             KafkaClusterInfo clusterInfo = new KafkaClusterInfo("", kafkaBrokerZkQuorum);

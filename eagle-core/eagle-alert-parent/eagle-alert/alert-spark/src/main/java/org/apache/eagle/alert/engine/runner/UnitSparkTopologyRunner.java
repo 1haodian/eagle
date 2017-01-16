@@ -123,12 +123,12 @@ public class UnitSparkTopologyRunner implements Serializable {
 
     private JavaStreamingContext buildTopology(Config config, String checkpointDirectory) {
 
-        Set<String> topics = getTopicsByConfig(config); // 不会每次都调用
+        Set<String> topics = getTopicsByConfig(config);
         EagleKafkaUtils.fillInLatestOffsets(topics,
-                this.fromOffsets,
-                this.groupId,
-                this.kafkaCluster,
-                this.zkServers);
+            this.fromOffsets,
+            this.groupId,
+            this.kafkaCluster,
+            this.zkServers);
 
         int windowDurations = config.getInt(WINDOW_DURATIONS_SECOND);
         int slideDurations = config.getInt(SLIDE_DURATION_SECOND);
@@ -139,21 +139,20 @@ public class UnitSparkTopologyRunner implements Serializable {
 
         @SuppressWarnings("unchecked")
         Class<MessageAndMetadata<String, String>> streamClass =
-                (Class<MessageAndMetadata<String, String>>) (Class<?>) MessageAndMetadata.class;
+            (Class<MessageAndMetadata<String, String>>) (Class<?>) MessageAndMetadata.class;
         JavaStreamingContext jssc = new JavaStreamingContext(sparkConf, Durations.seconds(batchDuration));
         if (!StringUtils.isEmpty(checkpointDirectory)) {
             jssc.checkpoint(checkpointDirectory);
         }
-        // 每个窗口会执行InputDStream的compute方法，所以可以操作的地方就是inputDStream的compute方法
         JavaInputDStream<MessageAndMetadata<String, String>> messages = EagleKafkaUtils.createDirectStream(jssc,
-                String.class,
-                String.class,
-                StringDecoder.class,
-                StringDecoder.class,
-                streamClass,
-                kafkaParams,
-                this.fromOffsets,
-                new RefreshTopicFunction(this.topicsRef, this.groupId, this.kafkaCluster, this.zkServers), message -> message);
+            String.class,
+            String.class,
+            StringDecoder.class,
+            StringDecoder.class,
+            streamClass,
+            kafkaParams,
+            this.fromOffsets,
+            new RefreshTopicFunction(this.topicsRef, this.groupId, this.kafkaCluster, this.zkServers), message -> message);
 
         WindowState winstate = new WindowState(jssc);
         RouteState routeState = new RouteState(jssc);
@@ -163,31 +162,31 @@ public class UnitSparkTopologyRunner implements Serializable {
 
 
         JavaPairDStream<String, String> pairDStream = messages
-                .transform(new ProcessSpecFunction(offsetRanges, // 重新获取topic并设置新的topicRef, offsetRange
-                        spoutSpecRef,
-                        sdsRef,
-                        alertBoltSpecRef,
-                        publishSpecRef,
-                        topicsRef,
-                        routerSpecRef,
-                        config,
-                        winstate,
-                        routeState,
-                        policyState,
-                        publishState,
-                        siddhiState,
-                        numOfAlertBolts))
-                .mapToPair((PairFunction<MessageAndMetadata<String, String>, String, String>) km -> new Tuple2<String, String>(km.topic(), km.message()));
+            .transform(new ProcessSpecFunction(offsetRanges,
+                spoutSpecRef,
+                sdsRef,
+                alertBoltSpecRef,
+                publishSpecRef,
+                topicsRef,
+                routerSpecRef,
+                config,
+                winstate,
+                routeState,
+                policyState,
+                publishState,
+                siddhiState,
+                numOfAlertBolts))
+            .mapToPair((PairFunction<MessageAndMetadata<String, String>, String, String>) km -> new Tuple2<String, String>(km.topic(), km.message()));
 
         pairDStream
-                .window(Durations.seconds(windowDurations), Durations.seconds(slideDurations))
-                .flatMapToPair(new CorrelationSpoutSparkFunction(numOfRouter, spoutSpecRef, sdsRef))
-                .groupByKey(new StreamRoutePartitioner(numOfRouter))
-                .mapPartitionsToPair(new StreamRouteBoltFunction("streamBolt", sdsRef, routerSpecRef, winstate, routeState))
-                .groupByKey(new StreamRoutePartitioner(numOfAlertBolts))
-                .mapPartitionsToPair(new AlertBoltFunction(sdsRef, alertBoltSpecRef, policyState, siddhiState, publishState))
-                .groupByKey(numOfPublishTasks)
-                .foreachRDD(new Publisher(alertPublishBoltName, kafkaCluster, groupId, offsetRanges, publishState, publishSpecRef, config));
+            .window(Durations.seconds(windowDurations), Durations.seconds(slideDurations))
+            .flatMapToPair(new CorrelationSpoutSparkFunction(numOfRouter, spoutSpecRef, sdsRef))
+            .groupByKey(new StreamRoutePartitioner(numOfRouter))
+            .mapPartitionsToPair(new StreamRouteBoltFunction("streamBolt", sdsRef, routerSpecRef, winstate, routeState))
+            .groupByKey(new StreamRoutePartitioner(numOfAlertBolts))
+            .mapPartitionsToPair(new AlertBoltFunction(sdsRef, alertBoltSpecRef, policyState, siddhiState, publishState))
+            .groupByKey(numOfPublishTasks)
+            .foreachRDD(new Publisher(alertPublishBoltName, kafkaCluster, groupId, offsetRanges, publishState, publishSpecRef, config));
         return jssc;
     }
 
@@ -201,14 +200,14 @@ public class UnitSparkTopologyRunner implements Serializable {
         this.kafkaParams.put("bootstrap.servers", inputBroker);
 
         scala.collection.mutable.Map<String, String> mutableKafkaParam = JavaConversions
-                .mapAsScalaMap(kafkaParams);
+            .mapAsScalaMap(kafkaParams);
         scala.collection.immutable.Map<String, String> immutableKafkaParam = mutableKafkaParam
-                .toMap(new Predef.$less$colon$less<Tuple2<String, String>, Tuple2<String, String>>() {
-                    public Tuple2<String, String> apply(
-                            Tuple2<String, String> v1) {
-                        return v1;
-                    }
-                });
+            .toMap(new Predef.$less$colon$less<Tuple2<String, String>, Tuple2<String, String>>() {
+                public Tuple2<String, String> apply(
+                    Tuple2<String, String> v1) {
+                    return v1;
+                }
+            });
         this.kafkaCluster = new KafkaCluster(immutableKafkaParam);
     }
 
@@ -241,7 +240,6 @@ public class UnitSparkTopologyRunner implements Serializable {
         Set<String> topics = new HashSet<>();
         List<Kafka2TupleMetadata> kafka2TupleMetadata = new ArrayList<>();
         try {
-            LOG.info("get topics By config");
             IMetadataServiceClient client = new MetadataServiceClientImpl(config);
             kafka2TupleMetadata = client.listDataSources();
         } catch (Exception e) {

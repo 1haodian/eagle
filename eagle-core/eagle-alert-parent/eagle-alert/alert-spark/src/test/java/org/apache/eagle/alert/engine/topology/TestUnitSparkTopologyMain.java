@@ -20,7 +20,6 @@ package org.apache.eagle.alert.engine.topology;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import org.apache.eagle.alert.engine.runner.UnitSparkTopologyRunner;
-import org.apache.eagle.alert.engine.runner.UnitSparkTopologyRunner4MultiKafka;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -37,7 +36,7 @@ public class TestUnitSparkTopologyMain {
         System.setProperty("config.resource", configResourceName);
         System.out.print("Set config.resource = " + configResourceName);
         Config config = ConfigFactory.load();
-        new UnitSparkTopologyRunner4MultiKafka(config).run();
+        new UnitSparkTopologyRunner(config).run();
     }
 
     public static void main(String[] args) throws InterruptedException {

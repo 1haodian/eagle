@@ -5,9 +5,9 @@
  * The ASF licenses this file to You under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
- * <p/>
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- * <p/>
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,12 +21,17 @@ import com.typesafe.config.Config;
 import org.apache.eagle.alert.coordination.model.PublishSpec;
 import org.apache.eagle.alert.engine.coordinator.PublishPartition;
 import org.apache.eagle.alert.engine.coordinator.Publishment;
+import org.apache.eagle.alert.engine.coordinator.StreamDefinition;
 import org.apache.eagle.alert.engine.model.AlertStreamEvent;
 import org.apache.eagle.alert.engine.publisher.AlertPublisher;
+import org.apache.eagle.alert.engine.publisher.AlertStreamFilter;
+import org.apache.eagle.alert.engine.publisher.PipeStreamFilter;
 import org.apache.eagle.alert.engine.publisher.impl.AlertPublisherImpl;
+import org.apache.eagle.alert.engine.publisher.template.AlertTemplateEngine;
+import org.apache.eagle.alert.engine.publisher.template.AlertTemplateProvider;
 import org.apache.eagle.alert.engine.runner.MapComparator;
+import org.apache.eagle.alert.engine.spark.model.PolicyState;
 import org.apache.eagle.alert.engine.spark.model.PublishState;
-
 import org.apache.spark.api.java.function.VoidFunction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,12 +49,22 @@ public class AlertPublisherBoltFunction implements VoidFunction<Iterator<Tuple2<
     private PublishState publishState;
     private Map<String, Publishment> cachedPublishments = new HashMap<>();
     private Config config;
+    private AlertTemplateEngine alertTemplateEngine;
+    private AlertStreamFilter alertFilter;
+    private AtomicReference<Map<String, StreamDefinition>> sdsRef;
+    private PolicyState policyState;
 
-    public AlertPublisherBoltFunction(AtomicReference<PublishSpec> publishSpecRef, String alertPublishBoltName, PublishState publishState, Config config) {
+    public AlertPublisherBoltFunction(AtomicReference<PublishSpec> publishSpecRef, String alertPublishBoltName, PublishState publishState,
+                                      AtomicReference<Map<String, StreamDefinition>> sdsRef, PolicyState policyState, Config config) {
         this.alertPublishBoltName = alertPublishBoltName;
         this.publishSpecRef = publishSpecRef;
         this.publishState = publishState;
+        this.sdsRef = sdsRef;
+        this.policyState = policyState;
         this.config = config;
+        this.alertTemplateEngine = AlertTemplateProvider.createAlertTemplateEngine();
+        this.alertTemplateEngine.init(config);
+        this.alertFilter = new PipeStreamFilter(new AlertContextEnrichFilter(this), new AlertTemplateFilter(alertTemplateEngine));
     }
 
     @Override
@@ -73,9 +88,10 @@ public class AlertPublisherBoltFunction implements VoidFunction<Iterator<Tuple2<
                 onAlertPublishSpecChange(alertPublisher, publishSpec, cachedPublishments);
                 publishState.store(publishPartition, cachedPublishments);
             }
-            AlertStreamEvent alertEvent = alertEvents.next();
+            AlertStreamEvent filteredEvent = alertFilter.filter(alertEvents.next());
+
             //TODO wrapAlertPublishEvent
-            alertPublisher.nextEvent(publishPartition, alertEvent);
+            alertPublisher.nextEvent(publishPartition, filteredEvent);
         }
         if (alertPublisher != null) {
             alertPublisher.close();
@@ -102,5 +118,39 @@ public class AlertPublisherBoltFunction implements VoidFunction<Iterator<Tuple2<
         comparator.getModified().forEach(p -> beforeModified.add(cachedPublishments.get(p.getName())));
         alertPublisher.onPublishChange(comparator.getAdded(), comparator.getRemoved(), comparator.getModified(), beforeModified);
         this.cachedPublishments = newPublishmentsMap;
+    }
+
+
+    private class AlertContextEnrichFilter implements AlertStreamFilter {
+        private final AlertPublisherBoltFunction alertPublisherBoltFunction;
+
+        private AlertContextEnrichFilter(AlertPublisherBoltFunction alertPublisherBoltFunction) {
+            this.alertPublisherBoltFunction = alertPublisherBoltFunction;
+        }
+
+        /**
+         * TODO: Refactor wrapAlertPublishEvent into alertTemplateEngine and remove extraData from AlertStreamEvent.
+         */
+        @Override
+        public AlertStreamEvent filter(AlertStreamEvent event) {
+            event.ensureAlertId();
+            /**
+             * TODO
+             */
+            return event;
+        }
+    }
+
+    private class AlertTemplateFilter implements AlertStreamFilter {
+        private final AlertTemplateEngine alertTemplateEngine;
+
+        private AlertTemplateFilter(AlertTemplateEngine alertTemplateEngine) {
+            this.alertTemplateEngine = alertTemplateEngine;
+        }
+
+        @Override
+        public AlertStreamEvent filter(AlertStreamEvent event) {
+            return this.alertTemplateEngine.filter(event);
+        }
     }
 }

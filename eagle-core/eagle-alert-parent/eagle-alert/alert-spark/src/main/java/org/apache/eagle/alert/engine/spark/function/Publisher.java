@@ -5,9 +5,9 @@
  * The ASF licenses this file to You under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
- * <p/>
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- * <p/>
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,7 +21,9 @@ import com.typesafe.config.Config;
 import kafka.common.TopicAndPartition;
 import org.apache.eagle.alert.coordination.model.PublishSpec;
 import org.apache.eagle.alert.engine.coordinator.PublishPartition;
+import org.apache.eagle.alert.engine.coordinator.StreamDefinition;
 import org.apache.eagle.alert.engine.model.AlertStreamEvent;
+import org.apache.eagle.alert.engine.spark.model.PolicyState;
 import org.apache.eagle.alert.engine.spark.model.PublishState;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.function.VoidFunction;
@@ -46,23 +48,27 @@ public class Publisher implements VoidFunction<JavaPairRDD<PublishPartition, Ite
     private AtomicReference<OffsetRange[]> offsetRanges;
     private AtomicReference<PublishSpec> publishSpecRef;
     private PublishState publishState;
+    private AtomicReference<Map<String, StreamDefinition>> sdsRef;
+    private PolicyState policyState;
     private Config config;
     private static final Logger LOG = LoggerFactory.getLogger(Publisher.class);
 
     public Publisher(String alertPublishBoltName, KafkaCluster kafkaCluster, String groupId, AtomicReference<OffsetRange[]> offsetRanges,
-                     PublishState publishState, AtomicReference<PublishSpec> publishSpecRef, Config config) {
+                     PublishState publishState, AtomicReference<PublishSpec> publishSpecRef, AtomicReference<Map<String, StreamDefinition>> sdsRef, PolicyState policyState, Config config) {
         this.alertPublishBoltName = alertPublishBoltName;
         this.kafkaCluster = kafkaCluster;
         this.groupId = groupId;
         this.offsetRanges = offsetRanges;
         this.publishSpecRef = publishSpecRef;
         this.publishState = publishState;
+        this.sdsRef = sdsRef;
+        this.policyState = policyState;
         this.config = config;
     }
 
     @Override
     public void call(JavaPairRDD<PublishPartition, Iterable<AlertStreamEvent>> rdd) throws Exception {
-        rdd.foreachPartition(new AlertPublisherBoltFunction(publishSpecRef, alertPublishBoltName, publishState, config));
+        rdd.foreachPartition(new AlertPublisherBoltFunction(publishSpecRef, alertPublishBoltName, publishState, sdsRef, policyState, config));
         updateOffset();
     }
 
@@ -74,11 +80,11 @@ public class Publisher implements VoidFunction<JavaPairRDD<PublishPartition, Ite
 
             scala.collection.mutable.Map<TopicAndPartition, Object> map = JavaConversions.mapAsScalaMap(topicAndPartitionObjectMap);
             scala.collection.immutable.Map<TopicAndPartition, Object> scalatopicAndPartitionObjectMap =
-                    map.toMap(new Predef.$less$colon$less<Tuple2<TopicAndPartition, Object>, Tuple2<TopicAndPartition, Object>>() {
-                        public Tuple2<TopicAndPartition, Object> apply(Tuple2<TopicAndPartition, Object> v1) {
-                            return v1;
-                        }
-                    });
+                map.toMap(new Predef.$less$colon$less<Tuple2<TopicAndPartition, Object>, Tuple2<TopicAndPartition, Object>>() {
+                    public Tuple2<TopicAndPartition, Object> apply(Tuple2<TopicAndPartition, Object> v1) {
+                        return v1;
+                    }
+                });
             LOG.info("Updating offsets: {}", scalatopicAndPartitionObjectMap);
             kafkaCluster.setConsumerOffsets(groupId, scalatopicAndPartitionObjectMap);
         }

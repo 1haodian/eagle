@@ -89,8 +89,8 @@ R: ClassTag](
       val metadata = Map(
         "offsets" -> offsetRanges.toList,
         StreamInputInfo.METADATA_KEY_DESCRIPTION -> description)
-      val inputInfo = StreamInputInfo(id, rdd.count, metadata)
-      ssc.scheduler.inputInfoTracker.reportInfo(validTime, inputInfo)
+      // val inputInfo = StreamInputInfo(id, rdd.count, metadata)
+      // ssc.scheduler.inputInfoTracker.reportInfo(validTime, inputInfo)
       // refresh currentoffset map
       kafkaClusterInfo.setOffsets(untilOffsets.map(kv => kv._1 -> kv._2.offset.asInstanceOf[JLong]).asJava)
       getOffsetRangeHandler(rdd.offsetRanges, kafkaClusterInfo)

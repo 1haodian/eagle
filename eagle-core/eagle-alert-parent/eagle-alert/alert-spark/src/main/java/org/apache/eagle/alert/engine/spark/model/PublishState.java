@@ -17,12 +17,15 @@
 
 package org.apache.eagle.alert.engine.spark.model;
 
+import kafka.message.MessageAndMetadata;
 import org.apache.eagle.alert.engine.coordinator.PublishPartition;
 import org.apache.eagle.alert.engine.coordinator.Publishment;
 
 import org.apache.eagle.alert.engine.spark.accumulator.MapToMapAccum;
 import org.apache.eagle.alert.engine.spark.accumulator.MapToSetAccum;
 import org.apache.spark.Accumulator;
+import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,16 +48,28 @@ public class PublishState implements Serializable {
 
     private Accumulator<Map<String, Set<PublishPartition>>> cachedPublishPartitionsAccum;
 
+    private transient JavaStreamingContext jssc;
 
     public PublishState(JavaStreamingContext jssc) {
-        Accumulator<Map<PublishPartition, Map<String, Publishment>>> cachedPublishmentsAccum = jssc.sparkContext().accumulator(new HashMap<>(), "cachedPublishmentsAccum", new MapToMapAccum());
-        Accumulator<Map<String, Set<PublishPartition>>> cachedPublishPartitionsAccum = jssc.sparkContext().accumulator(new HashMap<>(), "cachedPublishPartitionsAccum", new MapToSetAccum());
+        this.jssc = jssc;
+
+    }
+
+    public void initailPublishState() {
+        Accumulator<Map<PublishPartition, Map<String, Publishment>>> cachedPublishmentsAccum =
+            jssc.sparkContext().accumulator(new HashMap<>(), "cachedPublishmentsAccum", new MapToMapAccum());
+        Accumulator<Map<String, Set<PublishPartition>>> cachedPublishPartitionsAccum =
+            jssc.sparkContext().accumulator(new HashMap<>(), "cachedPublishPartitionsAccum", new MapToSetAccum());
+
 
         this.cachedPublishmentsAccum = cachedPublishmentsAccum;
         this.cachedPublishPartitionsAccum = cachedPublishPartitionsAccum;
+
+
     }
 
     public void recover() {
+        initailPublishState();
         cachedPublishmentsRef.set(cachedPublishmentsAccum.value());
         LOG.debug("---------cachedPublishmentsRef----------" + cachedPublishmentsRef.get());
 

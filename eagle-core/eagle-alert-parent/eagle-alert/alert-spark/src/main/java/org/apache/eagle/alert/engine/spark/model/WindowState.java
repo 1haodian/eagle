@@ -17,6 +17,7 @@
 
 package org.apache.eagle.alert.engine.spark.model;
 
+import kafka.message.MessageAndMetadata;
 import org.apache.eagle.alert.engine.coordinator.StreamPartition;
 import org.apache.eagle.alert.engine.router.StreamSortHandler;
 import org.apache.eagle.alert.engine.router.impl.StreamRouterImpl;
@@ -24,6 +25,8 @@ import org.apache.eagle.alert.engine.sorter.StreamTimeClock;
 import org.apache.eagle.alert.engine.sorter.StreamTimeClockListener;
 import org.apache.eagle.alert.engine.spark.accumulator.MapToMapAccum;
 import org.apache.spark.Accumulator;
+import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,20 +45,21 @@ public class WindowState implements Serializable {
     private Accumulator<Map<Integer, Map<String, StreamTimeClock>>> streamIdClockAccum;
     private Accumulator<Map<Integer, Map<StreamTimeClockListener, String>>> streamWindowAccum;
     private Accumulator<Map<Integer, Map<StreamPartition, StreamSortHandler>>> streamSortHandlersAccum;
-
     private static final Logger LOG = LoggerFactory.getLogger(WindowState.class);
 
+    private transient JavaStreamingContext jssc;
+
     public WindowState(JavaStreamingContext jssc) {
+        this.jssc = jssc;
+    }
+
+    public void initailWindowState() {
+        LOG.info(jssc + "---------XXXXXXXXXXXXXXXXXXXXXXXXXXXXX----------" + jssc.sparkContext());
+
         Accumulator<Map<Integer, Map<String, StreamTimeClock>>> streamIdClockAccum = jssc.sparkContext().accumulator(new HashMap<>(), "streamIdClock", new MapToMapAccum());
         Accumulator<Map<Integer, Map<StreamTimeClockListener, String>>> streamWindowAccum = jssc.sparkContext().accumulator(new HashMap<>(), "streamWindow", new MapToMapAccum());
         Accumulator<Map<Integer, Map<StreamPartition, StreamSortHandler>>> streamSortHandlersAccum = jssc.sparkContext().accumulator(new HashMap<>(), "streamSortHandlers", new MapToMapAccum());
-        this.streamIdClockAccum = streamIdClockAccum;
-        this.streamWindowAccum = streamWindowAccum;
-        this.streamSortHandlersAccum = streamSortHandlersAccum;
-    }
 
-    public WindowState(Accumulator<Map<Integer, Map<String, StreamTimeClock>>> streamIdClockAccum, Accumulator<Map<Integer, Map<StreamTimeClockListener, String>>> streamWindowAccum,
-                       Accumulator<Map<Integer, Map<StreamPartition, StreamSortHandler>>> streamSortHandlersAccum) {
         this.streamIdClockAccum = streamIdClockAccum;
         this.streamWindowAccum = streamWindowAccum;
         this.streamSortHandlersAccum = streamSortHandlersAccum;
@@ -70,6 +74,9 @@ public class WindowState implements Serializable {
     }
 
     public void recover() {
+
+        initailWindowState();
+
         streamTimeClockRef.set(streamIdClockAccum.value());
         streamWindowRef.set(streamWindowAccum.value());
         streamSortHandlersRef.set(streamSortHandlersAccum.value());

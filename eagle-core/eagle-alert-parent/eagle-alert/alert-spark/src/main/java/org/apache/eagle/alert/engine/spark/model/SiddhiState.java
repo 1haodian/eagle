@@ -17,8 +17,11 @@
 
 package org.apache.eagle.alert.engine.spark.model;
 
+import kafka.message.MessageAndMetadata;
 import org.apache.eagle.alert.engine.spark.accumulator.MapToMapAccum;
 import org.apache.spark.Accumulator;
+import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,12 +37,19 @@ public class SiddhiState implements Serializable {
     private AtomicReference<Map<Integer, Map<String, byte[]>>> siddhiSnapshot = new AtomicReference<>();
     private Accumulator<Map<Integer, Map<String, byte[]>>> siddhiSnapShotAccum;
 
+    private transient JavaStreamingContext jssc;
+
     public SiddhiState(JavaStreamingContext jssc) {
+        this.jssc = jssc;
+    }
+
+    public void initailSiddhiState() {
         Accumulator<Map<Integer, Map<String, byte[]>>> siddhiSnapShotAccum = jssc.sparkContext().accumulator(new HashMap<>(), "siddhiSnapShotState", new MapToMapAccum());
         this.siddhiSnapShotAccum = siddhiSnapShotAccum;
     }
 
     public void recover() {
+        initailSiddhiState();
         siddhiSnapshot.set(siddhiSnapShotAccum.value());
         LOG.debug("---------siddhiSnapshot----------" + siddhiSnapshot.get());
     }

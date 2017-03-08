@@ -140,7 +140,7 @@ public class UnitSparkTopologyRunner implements Serializable {
         @SuppressWarnings("unchecked")
         Class<MessageAndMetadata<String, String>> streamClass =
             (Class<MessageAndMetadata<String, String>>) (Class<?>) MessageAndMetadata.class;
-        JavaStreamingContext jssc = new JavaStreamingContext(sparkConf, Durations.seconds(batchDuration));
+        final JavaStreamingContext jssc = new JavaStreamingContext(sparkConf, Durations.seconds(batchDuration));
         if (!StringUtils.isEmpty(checkpointDirectory)) {
             jssc.checkpoint(checkpointDirectory);
         }

@@ -91,15 +91,15 @@ public class ProcessSpecFunction4MultiKafka implements Function<JavaRDD<MessageA
         sdsRef.set(specManager.generateSds());
         publishSpecRef.set(specManager.generatePublishSpec());
         routerSpecRef.set(specManager.generateRouterSpec());
-        recoverState();
+        recoverState(rdd);
         return rdd;
     }
 
-    private void recoverState() {
-        winstate.recover();
-        routeState.recover();
-        policyState.recover();
-        publishState.recover();
-        siddhiState.recover();
+    private void recoverState(JavaRDD<MessageAndMetadata<String, String>> rdd) {
+        winstate.recover(rdd);
+        routeState.recover(rdd);
+        policyState.recover(rdd);
+        publishState.recover(rdd);
+        siddhiState.recover(rdd);
     }
 }

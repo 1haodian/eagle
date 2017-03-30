@@ -24,4 +24,8 @@ git fetch upstream
 echo "Rebase..."
 git rebase upstream/master 
 
+echo "Pushing with force ..."
+git push --force origin  travis-ci-test > /dev/null 2>&1 || exit 1
+echo "Pushed deployment successfully"
+
 exit 0

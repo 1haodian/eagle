@@ -32,4 +32,11 @@ echo "Pushing with force ..."
 git push --force origin  travis-ci-test > /dev/null 2>&1 || exit 1
 echo "Pushed deployment successfully"
 
+pwd
+git status
+git rev-list travis-ci-test --committer=Travis-CI --pretty=format:"%H %s"
+export YHD_FIRST_COMMIT_HASH=$(git rev-list travis-ci-test --committer=Travis-CI --pretty=format:"%H" |tail -1)
+export APACHE_LAST_COMMIT_HASH=$(git rev-list $YHD_FIRST_COMMIT_HASH^1 -1)
+echo "deploying eagle-0.5.0-SNAPSHOT-bin-$APACHE_LAST_COMMIT_HASH.tar.gz to GitHub releases"
+
 exit 0

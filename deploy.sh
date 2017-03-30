@@ -20,9 +20,13 @@ git config  user.email "travis@yhd.com"
 
 echo "Fetch..."
 git fetch upstream
+git status
+echo "Fetch... end"
 
 echo "Rebase..."
 git rebase upstream/master 
+git status
+echo "Rebase... end"
 
 echo "Pushing with force ..."
 git push --force origin  travis-ci-test > /dev/null 2>&1 || exit 1

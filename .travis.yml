@@ -26,11 +26,9 @@ install:
   - chmod ugo+x build.sh
 script:
   - '[ "${TRAVIS_PULL_REQUEST}" != "false" ] || ./deploy.sh'
-  - '[ "${TRAVIS_PULL_REQUEST}" != "false" ] || ./build.sh'
   - export YHD_FIRST_COMMIT_HASH=$(git rev-list master --committer=Travis-CI --pretty=format:"%H" |tail -1)
   - export APACHE_LAST_COMMIT_HASH=$(git rev-list $YHD_FIRST_COMMIT_HASH^1 -1)
   - echo "deploying eagle-0.5.0-SNAPSHOT-bin-$APACHE_LAST_COMMIT_HASH.tar.gz to GitHub releases"
-  - mv eagle-assembly/target/eagle-0.5.0-SNAPSHOT-bin.tar.gz eagle-assembly/target/eagle-0.5.0-SNAPSHOT-bin-$APACHE_LAST_COMMIT_HASH.tar.gz
 jdk:
   - oraclejdk8
 notifications:

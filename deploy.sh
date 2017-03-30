@@ -6,7 +6,7 @@ echo "${TRAVIS_EVENT_TYPE}"
 
 git clone https://github.com/1haodian/eagle.git eagle
 cd eagle
-git checkout master
+git checkout  travis-ci-test
 git status
 
 
@@ -23,25 +23,5 @@ git fetch upstream
 
 echo "Rebase..."
 git rebase upstream/master 
-
-echo "Pushing with force ..."
-git push --force origin master > /dev/null 2>&1 || exit 1
-echo "Pushed deployment successfully"
-
-set +e
-
-if [ -z "$TRAVIS_TAG" ]; then
-
-echo -e "Starting to tag commit.\n"
-
-# Add tag and push to master.
-
-git tag -a eagle-$TRAVIS_BRANCH -m "Travis build $TRAVIS_BRANCH pushed a tag."
-git push origin --tags
-git fetch origin
-
-echo -e "Done magic with tags.\n"
-
-fi
 
 exit 0

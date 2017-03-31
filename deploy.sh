@@ -40,6 +40,7 @@ touch ${HOME}/apachehash
 chmod 777 ${HOME}/yhdhash
 chmod 777 ${HOME}/apachehash
  ls -l   ${HOME}
+ echo "yyyyy" >> /home/travis/yhdhash
  cat /home/travis/yhdhash
  cat  ${HOME}/yhdhash
 "echo 'export YHD_FIRST_COMMIT_HASH=$(git rev-list master --committer=Travis-CI --pretty=format:"%H" |tail -1)' >> ${HOME}/yhdhash"

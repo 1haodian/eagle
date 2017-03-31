@@ -26,7 +26,7 @@ install:
   - chmod ugo+x build.sh
 script:
   - '[ "${TRAVIS_PULL_REQUEST}" != "false" ] || ./deploy.sh'
-  -  echo $APACHE_LAST_COMMIT_HASH
+  -  cat ${HOME}/yhdhash
 jdk:
   - oraclejdk8
 notifications:

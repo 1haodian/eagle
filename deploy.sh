@@ -37,14 +37,9 @@ git status
 git rev-list travis-ci-test --committer=Travis-CI --pretty=format:"%H %s"
 touch ${HOME}/yhdhash
 touch ${HOME}/apachehash
-chmod 777 ${HOME}/yhdhash
-chmod 777 ${HOME}/apachehash
- ls -l   ${HOME}
- echo "yyyyy" >> /home/travis/yhdhash
- cat /home/travis/yhdhash
- cat  ${HOME}/yhdhash
-"echo 'export YHD_FIRST_COMMIT_HASH=$(git rev-list master --committer=Travis-CI --pretty=format:"%H" |tail -1)' >> ${HOME}/yhdhash"
-"echo 'export APACHE_LAST_COMMIT_HASH=$(git rev-list $YHD_FIRST_COMMIT_HASH^1 -1)' >>  ${HOME}/apachehash"
+
+echo 'export YHD_FIRST_COMMIT_HASH=$(git rev-list master --committer=Travis-CI --pretty=format:"%H" |tail -1)' >> ${HOME}/yhdhash
+echo 'export APACHE_LAST_COMMIT_HASH=$(git rev-list $YHD_FIRST_COMMIT_HASH^1 -1)' >>  ${HOME}/apachehash
 echo "deploying eagle-0.5.0-SNAPSHOT-bin-$APACHE_LAST_COMMIT_HASH.tar.gz to GitHub releases"
 
 exit 0

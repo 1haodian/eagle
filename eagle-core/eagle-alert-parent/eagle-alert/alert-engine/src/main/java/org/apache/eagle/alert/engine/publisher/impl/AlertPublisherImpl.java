@@ -57,12 +57,12 @@ public class AlertPublisherImpl implements AlertPublisher {
     public AlertPublisherImpl(String name, Map<String, Publishment> publishments, Config config) {
         this.name = name;
         this.config = config;
-        Map<PublishPartition, AlertPublishPlugin> newPublishMap = new HashMap<>();
+        Map<String, AlertPublishPlugin> newPublishMap = new HashMap<>();
         publishments.forEach((publishmentName, publishment) -> {
             AlertPublishPlugin plugin = AlertPublishPluginsFactory.createNotificationPlugin(publishment, this.config, conf);
             if (plugin != null) {
                 for (PublishPartition p : getPublishPartitions(publishment)) {
-                    newPublishMap.put(p, plugin);
+                    newPublishMap.put(p.getPublishId(), plugin);
                 }
             } else {
                 LOG.error("Initialized alertPublisher {} failed due to invalid format", publishment);

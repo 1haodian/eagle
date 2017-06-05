@@ -21,14 +21,14 @@
       },
       "streamNameSelectorCls": "org.apache.eagle.alert.engine.scheme.PlainStringStreamNameSelector",
       "timestampColumn": "timestamp",
-      "timestampFormat": null
+      "timestampFormat": ""
     }
   },
   "streamRepartitionMetadataMap": {
     "oozie": [
       {
         "topicName": "oozie",
-        "streamId": "defaultStringStream",
+        "streamId": "oozieStream",
         "groupingStrategies": [
           {
             "partition": {

@@ -11,21 +11,17 @@ import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PCollectionView;
 import org.apache.eagle.alert.coordination.model.SpoutSpec;
 import org.apache.eagle.alert.engine.coordinator.StreamDefinition;
-import org.apache.eagle.alert.engine.coordinator.StreamPartition;
 import org.apache.eagle.alert.engine.model.PartitionedEvent;
-import org.apache.eagle.alert.engine.model.StreamEvent;
 import org.apache.eagle.alert.engine.utils.MetadataSerDeser;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 
-import java.io.Serializable;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.TreeMap;
 
-public class CorrelationSpoutFunctionTest implements Serializable {
+public class CorrelationSpoutFunctionTest  {
 
   @Rule public final TestPipeline p = TestPipeline.create().enableAbandonedNodeEnforcement(false);
 
@@ -73,16 +69,6 @@ public class CorrelationSpoutFunctionTest implements Serializable {
         .of("oozie",
             "{\"ip\":\"yyy.yyy.yyy.yyy\", \"jobId\":\"140648764-oozie-oozi-W2017-06-05 04:56:28\", \"operation\":\"start\", \"timestamp\":\""
                 + starttime + "\"}"))).apply(new CorrelationSpoutFunction(specView, sdsView, 10));
-
-    Map<String, Object> messageContent = new TreeMap<>();
-    messageContent.put("jobId", "140648764-oozie-oozi-W2017-06-05 04:56:28");
-    messageContent.put("ip", "yyy.yyy.yyy.yyy");
-    messageContent.put("operation", "start");
-    messageContent.put("timestamp", starttime);
-    StreamPartition streamPartition = newSpec.getStreamRepartitionMetadataMap().get("oozie")
-        .get(0).groupingStrategies.get(0).partition;
-    StreamEvent streamEvent = new StreamEvent("OOZIESTREAM", starttime, new Object[] {});
-    PartitionedEvent pevent = new PartitionedEvent(streamEvent, streamPartition, 109758167);
 
     PAssert.that(input)
         .satisfies((SerializableFunction<Iterable<KV<Integer, PartitionedEvent>>, Void>) kvs -> {

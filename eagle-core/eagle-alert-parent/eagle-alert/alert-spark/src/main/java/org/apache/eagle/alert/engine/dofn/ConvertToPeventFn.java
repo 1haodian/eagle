@@ -20,7 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class ConvertToPevent extends DoFn<KV<String, String>, KV<Integer, PartitionedEvent>> {
+public class ConvertToPeventFn extends DoFn<KV<String, String>, KV<Integer, PartitionedEvent>> {
 
   private static final Logger LOG = LoggerFactory.getLogger(CorrelationSpoutFunction.class);
   private PCollectionView<SpoutSpec> spoutSpecView;
@@ -28,7 +28,7 @@ public class ConvertToPevent extends DoFn<KV<String, String>, KV<Integer, Partit
   private int numOfRouterBolts;
 
 
-  public ConvertToPevent(PCollectionView<SpoutSpec> spoutSpecView,
+  public ConvertToPeventFn(PCollectionView<SpoutSpec> spoutSpecView,
       PCollectionView<Map<String, StreamDefinition>> sdsView, int numOfRouterBolts) {
     this.spoutSpecView = spoutSpecView;
     this.sdsView = sdsView;

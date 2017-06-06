@@ -1,6 +1,7 @@
 package org.apache.eagle.alert.engine.dofn;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.collect.Lists;
 import org.apache.beam.sdk.coders.BigEndianIntegerCoder;
 import org.apache.beam.sdk.coders.KvCoder;
 import org.apache.beam.sdk.coders.SerializableCoder;
@@ -31,13 +32,6 @@ public class FindNeedHandleEventTest implements Serializable {
   @Rule public final TestPipeline p = TestPipeline.create().enableAbandonedNodeEnforcement(false);
 
   @Test public void testFindNeedHandleEvent() {
-    PartitionedEvent pevent1 = new PartitionedEvent();
-    pevent1.setEvent(new StreamEvent());
-    pevent1.getEvent().setTimestamp(1);
-    List<PartitionedEvent> pevents = Arrays.asList(pevent1, new PartitionedEvent());
-
-    PCollection<PartitionedEvent> input = p
-        .apply(Create.of(pevents).withCoder(SerializableCoder.of(PartitionedEvent.class)));
 
     RouterSpec routerSpec = MetadataSerDeser
         .deserialize(getClass().getResourceAsStream("/spark/testStreamRouterBoltSpec.json"),
@@ -67,9 +61,27 @@ public class FindNeedHandleEventTest implements Serializable {
         "peventNOTNeedHandle") {
 
     };
+
+    PartitionedEvent pevent1 = new PartitionedEvent();
+    StreamPartition streamPartition = new StreamPartition();//"StreamPartition[streamId=oozieStream,type=GROUPBY,columns=[operation],sortSpec=[StreamSortSpec[windowPeriod=PT4S,windowMargin=1000]]]"
+    StreamSortSpec streamSortSpec = new StreamSortSpec();
+    streamSortSpec.setWindowMargin(1000);
+    streamSortSpec.setWindowPeriod("PT4S");
+    streamPartition.setStreamId("oozieStream");
+    streamPartition.setType(StreamPartition.Type.GROUPBY);
+    streamPartition.setColumns(Lists.newArrayList("operation"));
+    streamPartition.setSortSpec(streamSortSpec);
+    pevent1.setEvent(new StreamEvent());
+    pevent1.getEvent().setTimestamp(1);
+    pevent1.setPartition(streamPartition);
+
+    List<PartitionedEvent> pevents = Arrays.asList(pevent1, new PartitionedEvent());
+
+    PCollection<PartitionedEvent> input = p
+        .apply(Create.of(pevents).withCoder(SerializableCoder.of(PartitionedEvent.class)));
     PCollectionTuple output = input//.apply("GroupByKey", GroupByKey.create())
         .apply("Find need handle",
-            new FindNeedHandleEvent(routerSpecView, sdsView, sssView, srsView));
+            new FindNeedHandleEventFunction(routerSpecView, sdsView, sssView, srsView));
     output.get(peventNOTNeedHandle).apply("print1", ParDo.of(new PrintinDoFn1()));
     PAssert.that(output.get(peventNeedHandle)).containsInAnyOrder(pevent1);
     output.get(peventNeedHandle).apply("print2", ParDo.of(new PrintinDoFn2()));

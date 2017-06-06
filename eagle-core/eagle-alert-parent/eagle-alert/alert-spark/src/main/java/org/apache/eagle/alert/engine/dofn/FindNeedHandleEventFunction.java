@@ -10,13 +10,16 @@ import org.apache.eagle.alert.engine.coordinator.StreamDefinition;
 import org.apache.eagle.alert.engine.coordinator.StreamPartition;
 import org.apache.eagle.alert.engine.coordinator.StreamSortSpec;
 import org.apache.eagle.alert.engine.model.PartitionedEvent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
 
-public class FindNeedHandleEvent
+public class FindNeedHandleEventFunction
     extends PTransform<PCollection<PartitionedEvent>, PCollectionTuple> {
 
+  private static final Logger LOG = LoggerFactory.getLogger(FindNeedHandleEventFunction.class);
   private PCollectionView<RouterSpec> routerSpecView;
   private PCollectionView<Map<String, StreamDefinition>> sdsView;
   private PCollectionView<Map<StreamPartition, StreamSortSpec>> sssView;
@@ -30,7 +33,7 @@ public class FindNeedHandleEvent
 
   };
 
-  public FindNeedHandleEvent(PCollectionView<RouterSpec> routerSpecView,
+  public FindNeedHandleEventFunction(PCollectionView<RouterSpec> routerSpecView,
       PCollectionView<Map<String, StreamDefinition>> sdsView,
       PCollectionView<Map<StreamPartition, StreamSortSpec>> sssView,
       PCollectionView<Map<StreamPartition, List<StreamRouterSpec>>> srsView) {
@@ -42,58 +45,37 @@ public class FindNeedHandleEvent
 
   @Override public PCollectionTuple expand(PCollection<PartitionedEvent> events) {
 
-    return events.apply("division handle or no handle", ParDo
-        .of(new DoFn<PartitionedEvent, PartitionedEvent>() {
+    return events.apply("division handle or no handle",
+        ParDo.of(new DoFn<PartitionedEvent, PartitionedEvent>() {
 
           @ProcessElement public void processElement(ProcessContext c) {
             PartitionedEvent pevent = c.element();
-              if (!dispatchToSortHandler(pevent)) {
-                c.output(peventNOTNeedHandle, c.element());
-              } else {
-                c.output(peventNeedHandle, c.element());
-              }
+            Map<StreamPartition, StreamSortSpec> sss = c.sideInput(sssView);
+            if (!needWindowHandler(pevent, sss)) {
+              c.output(peventNOTNeedHandle, c.element());
+            } else {
+              c.output(peventNeedHandle, c.element());
+            }
           }
         }).withOutputTags(peventNOTNeedHandle, TupleTagList.of(peventNeedHandle))
-        .withSideInputs(routerSpecView, sdsView, sssView, srsView));
+            .withSideInputs(routerSpecView, sdsView, sssView, srsView));
   }
 
-  private boolean dispatchToSortHandler(PartitionedEvent event) {
+  private boolean needWindowHandler(PartitionedEvent event,
+      Map<StreamPartition, StreamSortSpec> sss) {
     if (event.getTimestamp() <= 0) {
       return false;
     }
 
-    /*StreamSortHandler sortHandler = streamSortHandlers.get(event.getPartition());
-    if (sortHandler == null) {
+    StreamSortSpec streamSortSpec = sss.get(event.getPartition());
+    if (streamSortSpec == null) {
       if (event.isSortRequired()) {
         LOG.warn("Stream sort handler required has not been loaded so emmit directly: {}", event);
-        this.context.counter().incr("miss_sort_count");
       }
       return false;
     } else {
-      sortHandler.nextEvent(event);
       return true;
-    }*/
-    return true;
+    }
   }
 
- /* .of(new DoFn<String, String>() {
-    public void processElement(ProcessContext c) {
-      String word = c.element();
-      if (word.length() <= wordLengthCutOff) {
-        // Emit short word to the main output.
-        // In this example, it is the output with tag wordsBelowCutOffTag.
-        c.output(word);
-      } else {
-        // Emit long word length to the output with tag wordLengthsAboveCutOffTag.
-        c.output(wordLengthsAboveCutOffTag, word.length());
-      }
-      if (word.startsWith("MARKER")) {
-        // Emit word to the output with tag markedWordsTag.
-        c.output(markedWordsTag, word);
-      }
-    }}));
-
-      .apply("AddEventTimestamps",
-             WithTimestamps.of((GameActionInfo i) -> new Instant(i.getTimestamp())))
-    */
 }

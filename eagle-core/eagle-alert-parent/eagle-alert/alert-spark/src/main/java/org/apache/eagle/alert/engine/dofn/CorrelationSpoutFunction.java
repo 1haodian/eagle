@@ -30,7 +30,7 @@ public class CorrelationSpoutFunction extends
   @Override public PCollectionList<KV<Integer, PartitionedEvent>> expand(
       PCollection<KV<String, String>> messages) {
     return messages
-        .apply(ParDo.of(new ConvertToPevent(spoutSpecView, sdsView, numOfRouterBolts)).withSideInputs(spoutSpecView,sdsView)).apply(
+        .apply(ParDo.of(new ConvertToPeventFn(spoutSpecView, sdsView, numOfRouterBolts)).withSideInputs(spoutSpecView,sdsView)).apply(
             Partition.of(numOfRouterBolts, new AlertBoltPartitionFn()));
   }
 }

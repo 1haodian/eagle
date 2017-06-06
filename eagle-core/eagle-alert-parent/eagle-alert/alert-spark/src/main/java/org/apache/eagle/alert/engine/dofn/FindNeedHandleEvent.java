@@ -11,22 +11,21 @@ import org.apache.eagle.alert.engine.coordinator.StreamPartition;
 import org.apache.eagle.alert.engine.coordinator.StreamSortSpec;
 import org.apache.eagle.alert.engine.model.PartitionedEvent;
 
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
 public class FindNeedHandleEvent
-    extends PTransform<PCollection<KV<Integer, Iterable<PartitionedEvent>>>, PCollectionTuple> {
+    extends PTransform<PCollection<PartitionedEvent>, PCollectionTuple> {
 
   private PCollectionView<RouterSpec> routerSpecView;
   private PCollectionView<Map<String, StreamDefinition>> sdsView;
   private PCollectionView<Map<StreamPartition, StreamSortSpec>> sssView;
   private PCollectionView<Map<StreamPartition, List<StreamRouterSpec>>> srsView;
-  private TupleTag<KV<Integer, Iterable<PartitionedEvent>>> peventNeedHandle = new TupleTag<KV<Integer, Iterable<PartitionedEvent>>>(
+  private TupleTag<PartitionedEvent> peventNeedHandle = new TupleTag<PartitionedEvent>(
       "peventNeedHandle") {
 
   };
-  private TupleTag<KV<Integer, Iterable<PartitionedEvent>>> peventNOTNeedHandle = new TupleTag<KV<Integer, Iterable<PartitionedEvent>>>(
+  private TupleTag<PartitionedEvent> peventNOTNeedHandle = new TupleTag<PartitionedEvent>(
       "peventNOTNeedHandle") {
 
   };
@@ -41,21 +40,18 @@ public class FindNeedHandleEvent
     this.srsView = srsView;
   }
 
-  @Override public PCollectionTuple expand(
-      PCollection<KV<Integer, Iterable<PartitionedEvent>>> events) {
+  @Override public PCollectionTuple expand(PCollection<PartitionedEvent> events) {
 
-    return events.apply("split pevent", ParDo
-        .of(new DoFn<KV<Integer, Iterable<PartitionedEvent>>, KV<Integer, Iterable<PartitionedEvent>>>() {
+    return events.apply("division handle or no handle", ParDo
+        .of(new DoFn<PartitionedEvent, PartitionedEvent>() {
 
           @ProcessElement public void processElement(ProcessContext c) {
-            Iterable<PartitionedEvent> pevents = c.element().getValue();
-            for (PartitionedEvent pevent : pevents) {
+            PartitionedEvent pevent = c.element();
               if (!dispatchToSortHandler(pevent)) {
                 c.output(peventNOTNeedHandle, c.element());
               } else {
                 c.output(peventNeedHandle, c.element());
               }
-            }
           }
         }).withOutputTags(peventNOTNeedHandle, TupleTagList.of(peventNeedHandle))
         .withSideInputs(routerSpecView, sdsView, sssView, srsView));
@@ -79,6 +75,7 @@ public class FindNeedHandleEvent
     }*/
     return true;
   }
+
  /* .of(new DoFn<String, String>() {
     public void processElement(ProcessContext c) {
       String word = c.element();

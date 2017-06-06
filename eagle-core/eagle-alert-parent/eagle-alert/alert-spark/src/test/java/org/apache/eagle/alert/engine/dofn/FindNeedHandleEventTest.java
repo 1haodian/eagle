@@ -34,11 +34,10 @@ public class FindNeedHandleEventTest implements Serializable {
     PartitionedEvent pevent1 = new PartitionedEvent();
     pevent1.setEvent(new StreamEvent());
     pevent1.getEvent().setTimestamp(1);
-    List<KV<Integer, PartitionedEvent>> pevents = Arrays
-        .asList(KV.of(3, pevent1), KV.of(4, new PartitionedEvent()));
+    List<PartitionedEvent> pevents = Arrays.asList(pevent1, new PartitionedEvent());
 
-    PCollection<KV<Integer, PartitionedEvent>> input = p.apply(Create.of(pevents).withCoder(
-        KvCoder.of(BigEndianIntegerCoder.of(), SerializableCoder.of(PartitionedEvent.class))));
+    PCollection<PartitionedEvent> input = p
+        .apply(Create.of(pevents).withCoder(SerializableCoder.of(PartitionedEvent.class)));
 
     RouterSpec routerSpec = MetadataSerDeser
         .deserialize(getClass().getResourceAsStream("/spark/testStreamRouterBoltSpec.json"),
@@ -60,53 +59,31 @@ public class FindNeedHandleEventTest implements Serializable {
     PCollectionView<Map<StreamPartition, List<StreamRouterSpec>>> srsView = p
         .apply("getSRS", Create.of(routerSpec.makeSRS())).apply("ViewSRSAsMap", View.asMap());
 
-    TupleTag<KV<Integer, Iterable<PartitionedEvent>>> peventNeedHandle = new TupleTag<KV<Integer, Iterable<PartitionedEvent>>>(
+    TupleTag<PartitionedEvent> peventNeedHandle = new TupleTag<PartitionedEvent>(
         "peventNeedHandle") {
 
     };
-    TupleTag<KV<Integer, Iterable<PartitionedEvent>>> peventNOTNeedHandle = new TupleTag<KV<Integer, Iterable<PartitionedEvent>>>(
+    TupleTag<PartitionedEvent> peventNOTNeedHandle = new TupleTag<PartitionedEvent>(
         "peventNOTNeedHandle") {
 
     };
-    PCollectionTuple output = input.apply("GroupByKey", GroupByKey.create())
+    PCollectionTuple output = input//.apply("GroupByKey", GroupByKey.create())
         .apply("Find need handle",
             new FindNeedHandleEvent(routerSpecView, sdsView, sssView, srsView));
     output.get(peventNOTNeedHandle).apply("print1", ParDo.of(new PrintinDoFn1()));
-    PAssert.that(output.get(peventNeedHandle)).satisfies(
-        (SerializableFunction<Iterable<KV<Integer, Iterable<PartitionedEvent>>>, Void>) input1 -> {
-          Iterator<KV<Integer, Iterable<PartitionedEvent>>> kvs = input1.iterator();
-          Assert.assertTrue(kvs.hasNext());
-          KV<Integer, Iterable<PartitionedEvent>> rs = kvs.next();
-          Assert.assertEquals(new Integer(3), rs.getKey());
-          Iterator<PartitionedEvent> rsitr = rs.getValue().iterator();
-          Assert.assertTrue(rsitr.hasNext());
-          Assert.assertEquals(pevent1, rsitr.next());
-          return null;
-        });
-
-    PAssert.that(output.get(peventNOTNeedHandle)).satisfies(
-        (SerializableFunction<Iterable<KV<Integer, Iterable<PartitionedEvent>>>, Void>) input1 -> {
-          Iterator<KV<Integer, Iterable<PartitionedEvent>>> kvs = input1.iterator();
-          Assert.assertTrue(kvs.hasNext());
-          KV<Integer, Iterable<PartitionedEvent>> rs = kvs.next();
-          Assert.assertEquals(new Integer(4), rs.getKey());
-          Iterator<PartitionedEvent> rsitr = rs.getValue().iterator();
-          Assert.assertTrue(rsitr.hasNext());
-          Assert.assertEquals(new PartitionedEvent(), rsitr.next());
-          return null;
-        });
+    PAssert.that(output.get(peventNeedHandle)).containsInAnyOrder(pevent1);
     output.get(peventNeedHandle).apply("print2", ParDo.of(new PrintinDoFn2()));
     p.run();
   }
 
-  private static class PrintinDoFn2 extends DoFn<KV<Integer, Iterable<PartitionedEvent>>, String> {
+  private static class PrintinDoFn2 extends DoFn<PartitionedEvent, String> {
 
     @ProcessElement public void processElement(ProcessContext c) {
       System.out.println("PrintinDoFn2" + c.element());
     }
   }
 
-  private static class PrintinDoFn1 extends DoFn<KV<Integer, Iterable<PartitionedEvent>>, String> {
+  private static class PrintinDoFn1 extends DoFn<PartitionedEvent, String> {
 
     @ProcessElement public void processElement(ProcessContext c) {
       System.out.println("PrintinDoFn1" + c.element());

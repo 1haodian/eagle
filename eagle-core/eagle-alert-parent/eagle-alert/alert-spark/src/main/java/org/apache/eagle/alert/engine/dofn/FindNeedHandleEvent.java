@@ -14,7 +14,7 @@ import org.apache.eagle.alert.engine.model.PartitionedEvent;
 import java.util.List;
 import java.util.Map;
 
-public class StreamRouteBoltFunction
+public class FindNeedHandleEvent
     extends PTransform<PCollection<KV<Integer, PartitionedEvent>>, PCollectionTuple> {
 
   private PCollectionView<RouterSpec> routerSpecView;
@@ -30,7 +30,7 @@ public class StreamRouteBoltFunction
 
   };
 
-  public StreamRouteBoltFunction(PCollectionView<RouterSpec> routerSpecView,
+  public FindNeedHandleEvent(PCollectionView<RouterSpec> routerSpecView,
       PCollectionView<Map<String, StreamDefinition>> sdsView,
       PCollectionView<Map<StreamPartition, StreamSortSpec>> sssView,
       PCollectionView<Map<StreamPartition, List<StreamRouterSpec>>> srsView) {
@@ -61,8 +61,8 @@ public class StreamRouteBoltFunction
     if (event.getTimestamp() <= 0) {
       return false;
     }
-/*
-    StreamSortHandler sortHandler = streamSortHandlers.get(event.getPartition());
+
+    /*StreamSortHandler sortHandler = streamSortHandlers.get(event.getPartition());
     if (sortHandler == null) {
       if (event.isSortRequired()) {
         LOG.warn("Stream sort handler required has not been loaded so emmit directly: {}", event);
@@ -90,5 +90,9 @@ public class StreamRouteBoltFunction
         // Emit word to the output with tag markedWordsTag.
         c.output(markedWordsTag, word);
       }
-    }}));*/
+    }}));
+
+      .apply("AddEventTimestamps",
+             WithTimestamps.of((GameActionInfo i) -> new Instant(i.getTimestamp())))
+    */
 }

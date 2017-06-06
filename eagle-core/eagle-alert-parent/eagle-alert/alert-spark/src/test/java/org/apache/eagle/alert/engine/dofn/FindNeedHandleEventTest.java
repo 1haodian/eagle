@@ -27,11 +27,11 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-public class StreamRouteBoltFunctionTest implements Serializable {
+public class FindNeedHandleEventTest implements Serializable {
 
   @Rule public final TestPipeline p = TestPipeline.create().enableAbandonedNodeEnforcement(false);
 
-  @Test public void testStreamRouteBoltFunction() {
+  @Test public void testFindNeedHandleEvent() {
     PartitionedEvent pevent1 = new PartitionedEvent();
     pevent1.setEvent(new StreamEvent());
     pevent1.getEvent().setTimestamp(1);
@@ -70,7 +70,7 @@ public class StreamRouteBoltFunctionTest implements Serializable {
 
     };
     PCollectionTuple output = input.apply("Stream Route",
-        new StreamRouteBoltFunction(routerSpecView, sdsView, sssView, srsView));
+        new FindNeedHandleEvent(routerSpecView, sdsView, sssView, srsView));
     output.get(peventNOTNeedHandle).apply("print1", ParDo.of(new PrintinDoFn1()));
     PAssert.that(output.get(peventNOTNeedHandle))
         .containsInAnyOrder(KV.of(4, new PartitionedEvent()));

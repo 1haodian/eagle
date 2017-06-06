@@ -15,12 +15,10 @@ import org.apache.eagle.alert.engine.coordinator.StreamSortSpec;
 import org.apache.eagle.alert.engine.model.PartitionedEvent;
 import org.apache.eagle.alert.engine.model.StreamEvent;
 import org.apache.eagle.alert.engine.utils.MetadataSerDeser;
-import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
 
 public class GroupByStreamPartitionFunctionTest {
@@ -33,7 +31,6 @@ public class GroupByStreamPartitionFunctionTest {
             RouterSpec.class);
     PCollectionView<RouterSpec> routerSpecView = p.apply("getRouterSpec", Create.of(routerSpec))
         .apply(View.asSingleton());
-
     PartitionedEvent pevent1 = new PartitionedEvent();
     StreamPartition streamPartition = new StreamPartition();//"StreamPartition[streamId=oozieStream,type=GROUPBY,columns=[operation],sortSpec=[StreamSortSpec[windowPeriod=PT4S,windowMargin=1000]]]"
     StreamSortSpec streamSortSpec = new StreamSortSpec();
@@ -61,33 +58,48 @@ public class GroupByStreamPartitionFunctionTest {
     pevent2.setPartition(streamPartition2);
 
     List<PartitionedEvent> pevents = Arrays.asList(pevent1, pevent2);
-    PCollection<PartitionedEvent> input = p.apply("create pevent", Create.of(pevents));
+    List<String> keys = Lists.newArrayList(
+        "StreamPartition[streamId=oozieStream,type=GROUPBY,columns=[operation],sortSpec=[StreamSortSpec[windowPeriod=PT4S,windowMargin=1000]]]",
+    "StreamPartition[streamId=oozieStream,type=GROUPBY,columns=[operation],sortSpec=[StreamSortSpec[windowPeriod=PT5S,windowMargin=2000]]]");
+        PCollection<PartitionedEvent> input = p.apply("create pevent", Create.of(pevents));
 
-    PCollection<KV<String, Iterable<PartitionedEvent>>> rs = input
+    int partitionNum = routerSpec.makeSSS().keySet().size();
+    PCollectionList<KV<String, PartitionedEvent>> rs = input
         .apply("covert to streampartition->pevent",
-            new GroupByStreamPartitionFunction(routerSpecView));
-
-    List<String> keys = Lists.newArrayList("StreamPartition[streamId=oozieStream,type=GROUPBY,columns=[operation],sortSpec=[StreamSortSpec[windowPeriod=PT5S,windowMargin=2000]]]",
-        "StreamPartition[streamId=oozieStream,type=GROUPBY,columns=[operation],sortSpec=[StreamSortSpec[windowPeriod=PT4S,windowMargin=1000]]]");
-    PAssert.that(rs).satisfies(
-        (SerializableFunction<Iterable<KV<String, Iterable<PartitionedEvent>>>, Void>) input1 -> {
-          for (KV<String, Iterable<PartitionedEvent>> anInput1 : input1) {
-            Assert.assertTrue(keys.contains(anInput1.getKey()));
-            Iterator<PartitionedEvent> itr = anInput1.getValue().iterator();
-            while(itr.hasNext()){
-              pevents.contains(itr.next());
+            new GroupByStreamPartitionFunction(partitionNum));
+    PCollection<KV<String, PartitionedEvent>> partition = rs.get(0);
+    PAssert.that(partition).containsInAnyOrder(KV.of(keys.get(0), pevent1));
+     /* PAssert.that(partition).satisfies(
+          (SerializableFunction<Iterable<KV<String, Iterable<PartitionedEvent>>>, Void>) input1 -> {
+            for (KV<String, Iterable<PartitionedEvent>> anInput1 : input1) {
+              Assert.assertTrue(keys.contains(anInput1.getKey()));
+              Iterator<PartitionedEvent> itr = anInput1.getValue().iterator();
+              while (itr.hasNext()) {
+                pevents.contains(itr.next());
+              }
             }
-          }
-          return null;
-        });
-    rs.apply(ParDo.of(new PrintinDoFn()));
+            return null;
+          });*/
+    partition.apply("PrintinDoFn" + 0, ParDo.of(new PrintinDoFn(0)));
+
+    PCollection<KV<String, PartitionedEvent>> partition1 = rs.get(1);
+
+    PAssert.that(partition1).containsInAnyOrder((KV.of(keys.get(1), pevent2)));
+    partition1.apply("PrintinDoFn" + 1, ParDo.of(new PrintinDoFn(1)));
+
     p.run();
   }
 
-  private static class PrintinDoFn extends DoFn<KV<String, Iterable<PartitionedEvent>>, String> {
+  private static class PrintinDoFn extends DoFn<KV<String, PartitionedEvent>, String> {
+
+    private int partNum;
+
+    public PrintinDoFn(int partNum) {
+      this.partNum = partNum;
+    }
 
     @ProcessElement public void processElement(ProcessContext c) {
-      System.out.println("PrintinDoFn2" + c.element());
+      System.out.println("PrintinDoFn" + partNum + "   " + c.element());
     }
   }
 

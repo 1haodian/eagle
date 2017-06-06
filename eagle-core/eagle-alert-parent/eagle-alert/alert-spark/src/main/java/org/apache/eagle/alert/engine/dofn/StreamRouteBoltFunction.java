@@ -3,10 +3,7 @@ package org.apache.eagle.alert.engine.dofn;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
-import org.apache.beam.sdk.values.KV;
-import org.apache.beam.sdk.values.PCollection;
-import org.apache.beam.sdk.values.PCollectionView;
-import org.apache.beam.sdk.values.TupleTag;
+import org.apache.beam.sdk.values.*;
 import org.apache.eagle.alert.coordination.model.RouterSpec;
 import org.apache.eagle.alert.coordination.model.StreamRouterSpec;
 import org.apache.eagle.alert.engine.coordinator.StreamDefinition;
@@ -17,15 +14,19 @@ import org.apache.eagle.alert.engine.model.PartitionedEvent;
 import java.util.List;
 import java.util.Map;
 
-public class StreamRouteBoltFunction extends
-    PTransform<PCollection<KV<Integer, PartitionedEvent>>, PCollection<KV<Integer, PartitionedEvent>>> {
+public class StreamRouteBoltFunction
+    extends PTransform<PCollection<KV<Integer, PartitionedEvent>>, PCollectionTuple> {
 
   private PCollectionView<RouterSpec> routerSpecView;
   private PCollectionView<Map<String, StreamDefinition>> sdsView;
   private PCollectionView<Map<StreamPartition, StreamSortSpec>> sssView;
   private PCollectionView<Map<StreamPartition, List<StreamRouterSpec>>> srsView;
+  private TupleTag<KV<Integer, PartitionedEvent>> peventNeedHandle = new TupleTag<KV<Integer, PartitionedEvent>>(
+      "peventNeedHandle") {
 
-  final TupleTag<KV<Integer, PartitionedEvent>> peventNeedHandle = new TupleTag<KV<Integer, PartitionedEvent>>() {
+  };
+  private TupleTag<KV<Integer, PartitionedEvent>> peventNOTNeedHandle = new TupleTag<KV<Integer, PartitionedEvent>>(
+      "peventNOTNeedHandle") {
 
   };
 
@@ -39,21 +40,21 @@ public class StreamRouteBoltFunction extends
     this.srsView = srsView;
   }
 
-  @Override public PCollection<KV<Integer, PartitionedEvent>> expand(
-      PCollection<KV<Integer, PartitionedEvent>> events) {
+  @Override public PCollectionTuple expand(PCollection<KV<Integer, PartitionedEvent>> events) {
 
-    return events
-        .apply(ParDo.of(new DoFn<KV<Integer, PartitionedEvent>, KV<Integer, PartitionedEvent>>() {
+    return events.apply("split pevent",
+        ParDo.of(new DoFn<KV<Integer, PartitionedEvent>, KV<Integer, PartitionedEvent>>() {
 
           @ProcessElement public void processElement(ProcessContext c) {
             PartitionedEvent pevent = c.element().getValue();
             if (!dispatchToSortHandler(pevent)) {
-              c.output(c.element());
+              c.output(peventNOTNeedHandle, c.element());
             } else {
               c.output(peventNeedHandle, c.element());
             }
           }
-        }).withSideInputs(routerSpecView, sdsView, sssView, srsView));
+        }).withOutputTags(peventNOTNeedHandle, TupleTagList.of(peventNeedHandle))
+            .withSideInputs(routerSpecView, sdsView, sssView, srsView));
   }
 
   private boolean dispatchToSortHandler(PartitionedEvent event) {

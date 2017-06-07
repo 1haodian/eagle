@@ -65,7 +65,7 @@ public class CorrelationSpoutFunctionTest {
             new TypeReference<Map<String, StreamDefinition>>() {
 
             });
-
+   int numOfRouterBolts = 10;
     PCollectionView<Map<String, StreamDefinition>> sdsView = p.apply("getSds", Create
         .of(KV.of("oozieStream", sds.get("oozieStream")), KV.of("hdfs", new StreamDefinition())))
         .apply("viewTags", View.asMap());
@@ -73,10 +73,10 @@ public class CorrelationSpoutFunctionTest {
     PCollectionList<KV<Integer, PartitionedEvent>> input = p.apply("create message", Create.of(KV
         .of("oozie",
             "{\"ip\":\"yyy.yyy.yyy.yyy\", \"jobId\":\"140648764-oozie-oozi-W2017-06-05 04:56:28\", \"operation\":\"start\", \"timestamp\":\""
-                + starttime + "\"}"))).apply(new CorrelationSpoutFunction(specView, sdsView, 10));
-    Assert.assertEquals(10, input.size());
+                + starttime + "\"}"))).apply(new CorrelationSpoutFunction(specView, sdsView, numOfRouterBolts));
+    Assert.assertEquals(numOfRouterBolts, input.size());
 
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < numOfRouterBolts; i++) {
       PCollection<KV<Integer, PartitionedEvent>> partition = input.get(i);
       if (i == 3) {
         PAssert.that(partition).satisfies(

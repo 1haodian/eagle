@@ -6,7 +6,6 @@ import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.Partition;
 import org.apache.beam.sdk.values.*;
 import org.apache.eagle.alert.engine.model.PartitionedEvent;
-import org.apache.eagle.alert.engine.spark.manager.SpecManager;
 
 public class GroupByStreamPartitionFunction extends
     PTransform<PCollection<PartitionedEvent>, PCollectionList<KV<String, PartitionedEvent>>> {

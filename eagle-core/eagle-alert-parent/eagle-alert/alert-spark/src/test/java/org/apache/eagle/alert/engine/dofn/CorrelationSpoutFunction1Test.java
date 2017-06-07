@@ -1,7 +1,12 @@
 package org.apache.eagle.alert.engine.dofn;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import org.apache.beam.sdk.coders.KvCoder;
+import org.apache.beam.sdk.coders.StringUtf8Coder;
+import org.apache.beam.sdk.coders.VarIntCoder;
+import org.apache.beam.sdk.io.GenerateSequence;
 import org.apache.beam.sdk.testing.TestPipeline;
+import org.apache.beam.sdk.testing.TestStream;
 import org.apache.beam.sdk.transforms.Create;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.ParDo;
@@ -46,11 +51,12 @@ public class CorrelationSpoutFunction1Test implements Serializable {
         .of(KV.of("oozieStream", sds.get("oozieStream")), KV.of("hdfs", new StreamDefinition())))
         .apply("viewTags", View.asMap());
     long starttime = 1496638588877L;
-    PCollection<KV<Integer, PartitionedEvent>> input = p.apply("create message", Create.of(KV
-        .of("oozie",
-            "{\"ip\":\"yyy.yyy.yyy.yyy\", \"jobId\":\"140648764-oozie-oozi-W2017-06-05 04:56:28\", \"operation\":\"start\", \"timestamp\":\""
-                + starttime + "\"}"))).apply(new CorrelationSpoutFunction1(specView, sdsView, 10));
-
+    TestStream<KV<String,String>> source = TestStream.create(KvCoder.of(StringUtf8Coder.of(),StringUtf8Coder.of()))
+        .addElements(KV
+            .of("oozie",
+                "{\"ip\":\"yyy.yyy.yyy.yyy\", \"jobId\":\"140648764-oozie-oozi-W2017-06-05 04:56:28\", \"operation\":\"start\", \"timestamp\":\""
+                    + starttime + "\"}")).advanceWatermarkToInfinity();
+    PCollection<KV<Integer, PartitionedEvent>> input = p.apply(source).apply(new CorrelationSpoutFunction1(specView, sdsView, 10));
     Map<StreamPartition, StreamSortSpec> sss = routerSpec.makeSSS();
 
     Set<StreamPartition> sps = sss.keySet();

@@ -16,24 +16,24 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 import java.util.Map;
 
-public class FindNeedHandleEventFunction
+public class FindNeedWindowEventFunction
     extends PTransform<PCollection<PartitionedEvent>, PCollectionTuple> {
 
-  private static final Logger LOG = LoggerFactory.getLogger(FindNeedHandleEventFunction.class);
+  private static final Logger LOG = LoggerFactory.getLogger(FindNeedWindowEventFunction.class);
   private PCollectionView<RouterSpec> routerSpecView;
   private PCollectionView<Map<String, StreamDefinition>> sdsView;
   private PCollectionView<Map<StreamPartition, StreamSortSpec>> sssView;
   private PCollectionView<Map<StreamPartition, List<StreamRouterSpec>>> srsView;
-  private TupleTag<PartitionedEvent> peventNeedHandle = new TupleTag<PartitionedEvent>(
-      "peventNeedHandle") {
+  private TupleTag<PartitionedEvent> needWindow = new TupleTag<PartitionedEvent>(
+      "needWindow") {
 
   };
-  private TupleTag<PartitionedEvent> peventNOTNeedHandle = new TupleTag<PartitionedEvent>(
-      "peventNOTNeedHandle") {
+  private TupleTag<PartitionedEvent> noneedWindow = new TupleTag<PartitionedEvent>(
+      "noneedWindow") {
 
   };
 
-  public FindNeedHandleEventFunction(PCollectionView<RouterSpec> routerSpecView,
+  public FindNeedWindowEventFunction(PCollectionView<RouterSpec> routerSpecView,
       PCollectionView<Map<String, StreamDefinition>> sdsView,
       PCollectionView<Map<StreamPartition, StreamSortSpec>> sssView,
       PCollectionView<Map<StreamPartition, List<StreamRouterSpec>>> srsView) {
@@ -45,19 +45,19 @@ public class FindNeedHandleEventFunction
 
   @Override public PCollectionTuple expand(PCollection<PartitionedEvent> events) {
 
-    return events.apply("division handle or no handle",
+    return events.apply("division window or no window",
         ParDo.of(new DoFn<PartitionedEvent, PartitionedEvent>() {
 
           @ProcessElement public void processElement(ProcessContext c) {
             PartitionedEvent pevent = c.element();
             Map<StreamPartition, StreamSortSpec> sss = c.sideInput(sssView);
             if (!needWindowHandler(pevent, sss)) {
-              c.output(peventNOTNeedHandle, c.element());
+              c.output(noneedWindow, c.element());
             } else {
-              c.output(peventNeedHandle, c.element());
+              c.output(needWindow, c.element());
             }
           }
-        }).withOutputTags(peventNOTNeedHandle, TupleTagList.of(peventNeedHandle))
+        }).withOutputTags(noneedWindow, TupleTagList.of(needWindow))
             .withSideInputs(routerSpecView, sdsView, sssView, srsView));
   }
 

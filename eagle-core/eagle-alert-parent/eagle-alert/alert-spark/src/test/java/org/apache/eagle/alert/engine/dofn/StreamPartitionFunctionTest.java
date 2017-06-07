@@ -1,7 +1,6 @@
 package org.apache.eagle.alert.engine.dofn;
 
 import com.google.common.collect.Lists;
-import org.apache.beam.sdk.testing.PAssert;
 import org.apache.beam.sdk.testing.TestPipeline;
 import org.apache.beam.sdk.transforms.*;
 import org.apache.beam.sdk.values.KV;
@@ -9,19 +8,19 @@ import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PCollectionList;
 import org.apache.beam.sdk.values.PCollectionView;
 import org.apache.eagle.alert.coordination.model.RouterSpec;
-import org.apache.eagle.alert.coordination.model.SpoutSpec;
 import org.apache.eagle.alert.engine.coordinator.StreamPartition;
 import org.apache.eagle.alert.engine.coordinator.StreamSortSpec;
 import org.apache.eagle.alert.engine.model.PartitionedEvent;
 import org.apache.eagle.alert.engine.model.StreamEvent;
 import org.apache.eagle.alert.engine.utils.MetadataSerDeser;
+import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.List;
 
-public class GroupByStreamPartitionFunctionTest {
+public class StreamPartitionFunctionTest {
 
   @Rule public final TestPipeline p = TestPipeline.create().enableAbandonedNodeEnforcement(false);
 
@@ -29,8 +28,10 @@ public class GroupByStreamPartitionFunctionTest {
     RouterSpec routerSpec = MetadataSerDeser
         .deserialize(getClass().getResourceAsStream("/spark/testStreamRouterBoltSpec.json"),
             RouterSpec.class);
-    PCollectionView<RouterSpec> routerSpecView = p.apply("getRouterSpec", Create.of(routerSpec))
-        .apply(View.asSingleton());
+    List<StreamPartition> sps = Lists.newArrayList(routerSpec.makeSSS().keySet());
+    PCollectionView<List<StreamPartition>> spView = p.apply("getSss", Create.of(sps))
+        .apply(View.asList());
+
     PartitionedEvent pevent1 = new PartitionedEvent();
     StreamPartition streamPartition = new StreamPartition();//"StreamPartition[streamId=oozieStream,type=GROUPBY,columns=[operation],sortSpec=[StreamSortSpec[windowPeriod=PT4S,windowMargin=1000]]]"
     StreamSortSpec streamSortSpec = new StreamSortSpec();
@@ -60,46 +61,36 @@ public class GroupByStreamPartitionFunctionTest {
     List<PartitionedEvent> pevents = Arrays.asList(pevent1, pevent2);
     List<String> keys = Lists.newArrayList(
         "StreamPartition[streamId=oozieStream,type=GROUPBY,columns=[operation],sortSpec=[StreamSortSpec[windowPeriod=PT4S,windowMargin=1000]]]",
-    "StreamPartition[streamId=oozieStream,type=GROUPBY,columns=[operation],sortSpec=[StreamSortSpec[windowPeriod=PT5S,windowMargin=2000]]]");
-        PCollection<PartitionedEvent> input = p.apply("create pevent", Create.of(pevents));
+        "StreamPartition[streamId=oozieStream,type=GROUPBY,columns=[operation],sortSpec=[StreamSortSpec[windowPeriod=PT5S,windowMargin=2000]]]");
+    PCollection<PartitionedEvent> input = p.apply("create pevent", Create.of(pevents));
+    int partNum = routerSpec.makeSSS().keySet().size();
+    PCollectionList<KV<Integer, PartitionedEvent>> rs = input
+        .apply("covert to (streampartition->pevent)", new StreamPartitionFunction(spView, partNum));
 
-    int partitionNum = routerSpec.makeSSS().keySet().size();
-    PCollectionList<KV<String, PartitionedEvent>> rs = input
-        .apply("covert to streampartition->pevent",
-            new GroupByStreamPartitionFunction(partitionNum));
-    PCollection<KV<String, PartitionedEvent>> partition = rs.get(0);
-    PAssert.that(partition).containsInAnyOrder(KV.of(keys.get(0), pevent1));
-     /* PAssert.that(partition).satisfies(
-          (SerializableFunction<Iterable<KV<String, Iterable<PartitionedEvent>>>, Void>) input1 -> {
-            for (KV<String, Iterable<PartitionedEvent>> anInput1 : input1) {
-              Assert.assertTrue(keys.contains(anInput1.getKey()));
-              Iterator<PartitionedEvent> itr = anInput1.getValue().iterator();
-              while (itr.hasNext()) {
-                pevents.contains(itr.next());
-              }
-            }
-            return null;
-          });*/
-    partition.apply("PrintinDoFn" + 0, ParDo.of(new PrintinDoFn(0)));
-
-    PCollection<KV<String, PartitionedEvent>> partition1 = rs.get(1);
-
-    PAssert.that(partition1).containsInAnyOrder((KV.of(keys.get(1), pevent2)));
-    partition1.apply("PrintinDoFn" + 1, ParDo.of(new PrintinDoFn(1)));
-
+    for (int i = 0; i < partNum; i++) {
+      PCollection<KV<Integer, PartitionedEvent>> partition = rs.get(i);
+      partition
+          .apply("PrintinDoFn" + i, ParDo.of(new PrintinDoFn(i, spView)).withSideInputs(spView));
+    }
     p.run();
   }
 
-  private static class PrintinDoFn extends DoFn<KV<String, PartitionedEvent>, String> {
+  private static class PrintinDoFn extends DoFn<KV<Integer, PartitionedEvent>, String> {
 
     private int partNum;
+    private PCollectionView<List<StreamPartition>> spView;
 
-    public PrintinDoFn(int partNum) {
+    public PrintinDoFn(int partNum, PCollectionView<List<StreamPartition>> spView) {
       this.partNum = partNum;
+      this.spView = spView;
     }
 
     @ProcessElement public void processElement(ProcessContext c) {
-      System.out.println("PrintinDoFn" + partNum + "   " + c.element());
+      KV<Integer, PartitionedEvent> kv = c.element();
+      List<StreamPartition> sps = c.sideInput(spView);
+      System.out.println("PrintinDoFn" + partNum + "   " + kv);
+      Assert.assertEquals(new Integer(partNum), kv.getKey());
+      Assert.assertEquals(sps.get(partNum), kv.getValue().getPartition());
     }
   }
 

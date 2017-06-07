@@ -2,8 +2,6 @@ package org.apache.eagle.alert.engine.dofn;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.Lists;
-import org.apache.beam.sdk.coders.BigEndianIntegerCoder;
-import org.apache.beam.sdk.coders.KvCoder;
 import org.apache.beam.sdk.coders.SerializableCoder;
 import org.apache.beam.sdk.testing.PAssert;
 import org.apache.beam.sdk.testing.TestPipeline;
@@ -17,13 +15,11 @@ import org.apache.eagle.alert.engine.coordinator.StreamSortSpec;
 import org.apache.eagle.alert.engine.model.PartitionedEvent;
 import org.apache.eagle.alert.engine.model.StreamEvent;
 import org.apache.eagle.alert.engine.utils.MetadataSerDeser;
-import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 
 import java.io.Serializable;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -53,12 +49,12 @@ public class FindNeedHandleEventTest implements Serializable {
     PCollectionView<Map<StreamPartition, List<StreamRouterSpec>>> srsView = p
         .apply("getSRS", Create.of(routerSpec.makeSRS())).apply("ViewSRSAsMap", View.asMap());
 
-    TupleTag<PartitionedEvent> peventNeedHandle = new TupleTag<PartitionedEvent>(
-        "peventNeedHandle") {
+    TupleTag<PartitionedEvent> needWindow = new TupleTag<PartitionedEvent>(
+        "needWindow") {
 
     };
-    TupleTag<PartitionedEvent> peventNOTNeedHandle = new TupleTag<PartitionedEvent>(
-        "peventNOTNeedHandle") {
+    TupleTag<PartitionedEvent> noneedWindow = new TupleTag<PartitionedEvent>(
+        "noneedWindow") {
 
     };
 
@@ -81,10 +77,10 @@ public class FindNeedHandleEventTest implements Serializable {
         .apply(Create.of(pevents).withCoder(SerializableCoder.of(PartitionedEvent.class)));
     PCollectionTuple output = input//.apply("GroupByKey", GroupByKey.create())
         .apply("Find need handle",
-            new FindNeedHandleEventFunction(routerSpecView, sdsView, sssView, srsView));
-    output.get(peventNOTNeedHandle).apply("print1", ParDo.of(new PrintinDoFn1()));
-    PAssert.that(output.get(peventNeedHandle)).containsInAnyOrder(pevent1);
-    output.get(peventNeedHandle).apply("print2", ParDo.of(new PrintinDoFn2()));
+            new FindNeedWindowEventFunction(routerSpecView, sdsView, sssView, srsView));
+    output.get(noneedWindow).apply("print1", ParDo.of(new PrintinDoFn1()));
+    PAssert.that(output.get(needWindow)).containsInAnyOrder(pevent1);
+    output.get(needWindow).apply("print2", ParDo.of(new PrintinDoFn2()));
     p.run();
   }
 

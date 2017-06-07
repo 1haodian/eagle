@@ -25,7 +25,7 @@ import java.util.Map;
 public class CorrelationSpoutFunctionTest {
 
   @Rule public final TestPipeline p = TestPipeline.create().enableAbandonedNodeEnforcement(false);
-
+  private int numOfRouterBolts = 10;
   @Test public void testCorrelationSpoutFunctionEmpty() {
 
     SpoutSpec newSpec = MetadataSerDeser
@@ -45,9 +45,9 @@ public class CorrelationSpoutFunctionTest {
 
     PCollectionList<KV<Integer, PartitionedEvent>> input = p
         .apply("create message", Create.of(KV.of("oozie", "message")))
-        .apply(new CorrelationSpoutFunction(specView, sdsView, 10));
-    Assert.assertEquals(10, input.size());
-    for (int i = 0; i < 10; i++) {
+        .apply(new CorrelationSpoutFunction(specView, sdsView, numOfRouterBolts));
+    Assert.assertEquals(numOfRouterBolts, input.size());
+    for (int i = 0; i < numOfRouterBolts; i++) {
       PCollection<KV<Integer, PartitionedEvent>> partition = input.get(i);
       PAssert.that(partition).containsInAnyOrder(Collections.emptyList());
     }
@@ -65,7 +65,6 @@ public class CorrelationSpoutFunctionTest {
             new TypeReference<Map<String, StreamDefinition>>() {
 
             });
-   int numOfRouterBolts = 10;
     PCollectionView<Map<String, StreamDefinition>> sdsView = p.apply("getSds", Create
         .of(KV.of("oozieStream", sds.get("oozieStream")), KV.of("hdfs", new StreamDefinition())))
         .apply("viewTags", View.asMap());

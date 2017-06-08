@@ -26,7 +26,8 @@ public class ConvertToPeventFn extends DoFn<KV<String, String>, KV<Integer, Part
   private PCollectionView<SpoutSpec> spoutSpecView;
   private PCollectionView<Map<String, StreamDefinition>> sdsView;
   private int numOfRouterBolts;
-
+  private ObjectMapper mapper;
+  private TypeReference<HashMap<String, Object>> typeRef;
 
   public ConvertToPeventFn(PCollectionView<SpoutSpec> spoutSpecView,
       PCollectionView<Map<String, StreamDefinition>> sdsView, int numOfRouterBolts) {
@@ -35,11 +36,15 @@ public class ConvertToPeventFn extends DoFn<KV<String, String>, KV<Integer, Part
     this.numOfRouterBolts = numOfRouterBolts;
   }
 
-  @ProcessElement public void processElement(ProcessContext c) {
-    final ObjectMapper mapper = new ObjectMapper();
-    final TypeReference<HashMap<String, Object>> typeRef = new TypeReference<HashMap<String, Object>>() {
+  @Setup public void prepare() {
+    mapper = new ObjectMapper();
+    typeRef = new TypeReference<HashMap<String, Object>>() {
 
     };
+  }
+
+  @ProcessElement public void processElement(ProcessContext c) {
+
     Map<String, Object> value;
     KV<String, String> msg = c.element();
     try {

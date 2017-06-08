@@ -3,14 +3,11 @@ package org.apache.eagle.alert.engine.dofn;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
-import org.apache.beam.sdk.transforms.windowing.FixedWindows;
-import org.apache.beam.sdk.transforms.windowing.Window;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PCollectionView;
 import org.apache.eagle.alert.engine.coordinator.StreamPartition;
 import org.apache.eagle.alert.engine.model.PartitionedEvent;
-import org.joda.time.Duration;
 
 public class FilterPartitionAndWindowFunction extends
     PTransform<PCollection<KV<Integer, PartitionedEvent>>, PCollection<KV<Integer, PartitionedEvent>>> {

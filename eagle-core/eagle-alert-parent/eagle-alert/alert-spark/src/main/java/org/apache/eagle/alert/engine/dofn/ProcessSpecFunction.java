@@ -3,15 +3,16 @@ package org.apache.eagle.alert.engine.dofn;
 import com.typesafe.config.Config;
 import org.apache.beam.sdk.io.kafka.KafkaRecord;
 import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.TupleTag;
 import org.apache.eagle.alert.coordination.model.AlertBoltSpec;
 import org.apache.eagle.alert.coordination.model.SpoutSpec;
 import org.apache.eagle.alert.engine.spark.manager.SpecManager;
 
 public class ProcessSpecFunction
-    extends DoFn<KafkaRecord<String, String>, KafkaRecord<String, String>> {
+    extends DoFn<KV<String, String>, KV<String, String>> {
 
-  private final TupleTag<KafkaRecord<String, String>> kafkaRecordTupleTag;
+  private final TupleTag<KV<String, String>> kafkaRecordTupleTag;
   private final TupleTag<SpoutSpec> spoutSpecTupleTag;
 
   private final TupleTag<AlertBoltSpec> alertBoltSpecTupleTag;
@@ -19,7 +20,7 @@ public class ProcessSpecFunction
   private Config config;
 
   public ProcessSpecFunction(Config config, int numOfAlertBolts,
-      TupleTag<KafkaRecord<String, String>> kafkaRecordTupleTag,
+      TupleTag<KV<String, String>> kafkaRecordTupleTag,
       TupleTag<SpoutSpec> spoutSpecTupleTag, TupleTag<AlertBoltSpec> alertBoltSpecTupleTag) {
     this.numOfAlertBolts = numOfAlertBolts;
     this.config = config;

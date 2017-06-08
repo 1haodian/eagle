@@ -2,17 +2,21 @@ package org.apache.eagle.alert.engine.dofn;
 
 import com.google.common.collect.Lists;
 import org.apache.beam.sdk.coders.SerializableCoder;
+import org.apache.beam.sdk.io.TextIO;
 import org.apache.beam.sdk.testing.PAssert;
 import org.apache.beam.sdk.testing.TestPipeline;
 import org.apache.beam.sdk.testing.TestStream;
 import org.apache.beam.sdk.transforms.*;
 import org.apache.beam.sdk.transforms.windowing.*;
 import org.apache.beam.sdk.values.PCollection;
+import org.apache.beam.sdk.values.PCollectionView;
 import org.apache.beam.sdk.values.TimestampedValue;
+import org.apache.eagle.alert.coordination.model.SpoutSpec;
 import org.apache.eagle.alert.engine.coordinator.StreamPartition;
 import org.apache.eagle.alert.engine.coordinator.StreamSortSpec;
 import org.apache.eagle.alert.engine.model.PartitionedEvent;
 import org.apache.eagle.alert.engine.model.StreamEvent;
+import org.apache.eagle.alert.engine.utils.MetadataSerDeser;
 import org.joda.time.Duration;
 import org.joda.time.Instant;
 import org.junit.Rule;
@@ -187,8 +191,34 @@ public class WindowFunctionTest {
     PAssert.that(triggered).inOnTimePane(window).containsInAnyOrder(Collections.emptyList());
     p.run();
   }
+  @Test public void testPCViewTrigger() {
+    SpoutSpec newSpec = MetadataSerDeser
+        .deserialize(getClass().getResourceAsStream("/spark/testSpoutSpec.json"), SpoutSpec.class);
+    PCollectionView<SpoutSpec> specView = p
+       // .apply(TextIO.read().from("/local/path/to/file.txt"))
+        .apply("getSpec", Create.of(newSpec)).apply("SpoutSpec windows",
+        Window.<SpoutSpec>into(new GlobalWindows()).triggering(
+            AfterProcessingTime.pastFirstElementInPane().plusDelayOf(Duration.standardSeconds(10)))
+            .discardingFiredPanes().withAllowedLateness(Duration.ZERO))
+        .apply(View.asSingleton());
 
+    PCollection<SpoutSpec> triggered = (PCollection<SpoutSpec>) specView.getPCollection();
+    triggered.apply(WithKeys.of(1))
+        .apply(GroupByKey.create()).apply(Values.create()).apply(Flatten.iterables())
+        .apply(ParDo.of(new PrintingDoFn2()));
+    p.run();
+  }
   private static class PrintingDoFn extends DoFn<PartitionedEvent, String> {
+
+    @ProcessElement public void processElement(ProcessContext c, BoundedWindow window) {
+      c.output(
+          c.element() + ":" + c.timestamp().getMillis() + ":" + window.maxTimestamp().getMillis());
+      System.out.println(
+          c.element() + ":--" + c.timestamp().toDateTime() + "--:" + window.toString() + ":"
+              + window.maxTimestamp().toDateTime() + ":" + c.pane());
+    }
+  }
+  private static class PrintingDoFn2 extends DoFn<SpoutSpec, String> {
 
     @ProcessElement public void processElement(ProcessContext c, BoundedWindow window) {
       c.output(

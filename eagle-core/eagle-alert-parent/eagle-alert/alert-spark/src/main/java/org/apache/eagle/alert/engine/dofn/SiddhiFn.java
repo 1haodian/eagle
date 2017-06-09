@@ -1,21 +1,19 @@
 package org.apache.eagle.alert.engine.dofn;
 
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.transforms.windowing.GlobalWindow;
 import org.apache.beam.sdk.values.PCollectionView;
 import org.apache.eagle.alert.coordination.model.AlertBoltSpec;
 import org.apache.eagle.alert.engine.coordinator.PolicyDefinition;
 import org.apache.eagle.alert.engine.coordinator.StreamDefinition;
 import org.apache.eagle.alert.engine.coordinator.StreamNotDefinedException;
-import org.apache.eagle.alert.engine.evaluator.CompositePolicyHandler;
-import org.apache.eagle.alert.engine.evaluator.PolicyHandlerContext;
-import org.apache.eagle.alert.engine.evaluator.impl.AlertStreamCallback;
+import org.apache.eagle.alert.engine.coordinator.StreamPartition;
 import org.apache.eagle.alert.engine.evaluator.impl.AlertStreamCallbackBeam;
 import org.apache.eagle.alert.engine.evaluator.impl.SiddhiDefinitionAdapter;
 import org.apache.eagle.alert.engine.model.AlertStreamEvent;
 import org.apache.eagle.alert.engine.model.PartitionedEvent;
 import org.apache.eagle.alert.engine.model.StreamEvent;
+import org.joda.time.Instant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.wso2.siddhi.core.ExecutionPlanRuntime;
@@ -34,6 +32,8 @@ public class SiddhiFn extends DoFn<Iterable<PartitionedEvent>, AlertStreamEvent>
   private transient SiddhiManager siddhiManager;
   private transient AlertStreamCallbackBeam streamCallback;
   private PolicyDefinition activedPolicy;
+  private StreamPartition sp;
+  private List<AlertStreamEvent> results = new ArrayList<>();
 
   public SiddhiFn(PCollectionView<AlertBoltSpec> alertBoltSpecView,
       PCollectionView<Map<String, StreamDefinition>> sdsView) {
@@ -43,9 +43,6 @@ public class SiddhiFn extends DoFn<Iterable<PartitionedEvent>, AlertStreamEvent>
 
   @Setup public void prepare() {
     this.siddhiManager = new SiddhiManager();
-  }
-
-  @StartBundle public void start(StartBundleContext c) {
   }
 
   @ProcessElement public void processElement(ProcessContext c) throws Exception {
@@ -64,21 +61,34 @@ public class SiddhiFn extends DoFn<Iterable<PartitionedEvent>, AlertStreamEvent>
       if (activedPolicy == null) {
         PolicyDefinition choosedPolicy = choosePolicy(partitionedEvent, allPolicy);
         if (choosedPolicy == null) {
-          break;
+          LOG.info("drop in choosedPolicy " + partitionedEvent.getEvent());
+          continue;
         } else {
           activedPolicy = choosedPolicy;
+          sp = partitionedEvent.getPartition();
+          LOG.info("prepeareExecutionRuntime");
           prepeareExecutionRuntime(activedPolicy, sds);
 
         }
+      }
+      if (isAcceptedByPolicy(partitionedEvent, activedPolicy)) {
+        LOG.info("emit to siddhi " + partitionedEvent.getEvent());
         send(partitionedEvent.getEvent());
+      } else {
+        LOG.info("drop " + partitionedEvent.getEvent());
       }
 
     }
+  }
+
+  @FinishBundle public void finish(FinishBundleContext c) {
     if (streamCallback != null) {
-      List<AlertStreamEvent> rs = streamCallback.getResults();
-      for (AlertStreamEvent alertEvent : rs) {
-        c.output(alertEvent);
+      if (!results.isEmpty()) {
+        AlertStreamEvent alert = results.get(results.size() - 1);
+        LOG.info("emit final result from siddhi " + alert);
+        c.output(alert, new Instant(0), GlobalWindow.INSTANCE);//return final reduced value
       }
+
     }
 
   }
@@ -103,7 +113,8 @@ public class SiddhiFn extends DoFn<Iterable<PartitionedEvent>, AlertStreamEvent>
       if (executionRuntime.getStreamDefinitionMap().containsKey(outputStream)) {
         StreamDefinition streamDefinition = SiddhiDefinitionAdapter.convertFromSiddiDefinition(
             executionRuntime.getStreamDefinitionMap().get(outputStream));
-        this.streamCallback = new AlertStreamCallbackBeam(policy, streamDefinition, outputStream);
+        this.streamCallback = new AlertStreamCallbackBeam(policy, streamDefinition, outputStream,
+            sp, results);
         this.executionRuntime.addCallback(outputStream, streamCallback);
       } else {
         throw new IllegalStateException("Undefined output stream " + outputStream);
@@ -148,7 +159,6 @@ public class SiddhiFn extends DoFn<Iterable<PartitionedEvent>, AlertStreamEvent>
       LOG.info("Closed handler for policy {}", this.activedPolicy.getName());
     }
   }
-
 
   private boolean isAcceptedByPolicy(PartitionedEvent event, PolicyDefinition policy) {
     return policy.getPartitionSpec().contains(event.getPartition()) && (

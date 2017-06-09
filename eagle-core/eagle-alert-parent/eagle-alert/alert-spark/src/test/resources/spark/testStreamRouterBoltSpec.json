@@ -21,7 +21,7 @@
             "streamId": "oozieStream",
             "type": "GROUPBY",
             "columns": [
-              "ip"
+              "operation"
             ],
             "sortSpec": {
               "windowPeriod": "PT4S",
@@ -60,11 +60,11 @@
             "streamId": "testTopic4Stream",
             "type": "GROUPBY",
             "columns": [
-              "value"
+              "operation"
             ],
             "sortSpec": {
-              "windowPeriod": "PT10S",
-              "windowMargin": 1000
+              "windowPeriod": "PT5S",
+              "windowMargin": 2000
             }
           },
           "workers": [

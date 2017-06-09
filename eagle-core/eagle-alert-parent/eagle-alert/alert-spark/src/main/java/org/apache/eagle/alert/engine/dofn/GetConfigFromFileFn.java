@@ -22,4 +22,7 @@ public class GetConfigFromFileFn extends DoFn<KV<String, String>, String> {
     c.output(spoutSpecTupleTag, newSpec);
     c.output(message, "");
   }
+ /* @FinishBundle public void finish(FinishBundleContext c) {
+    c.output(newSpec, new Instant(0), GlobalWindow.INSTANCE);
+  }*/
 }

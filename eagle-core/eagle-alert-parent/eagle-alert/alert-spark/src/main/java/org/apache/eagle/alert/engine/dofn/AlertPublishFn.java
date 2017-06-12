@@ -69,7 +69,7 @@ public class AlertPublishFn
     newPublishments.forEach(p -> newPublishmentsMap.put(p.getName(), p));
 
     AlertBoltSpec alertBoltSpec = c.sideInput(alertBoltSpecView);
-    List<String> policyToRemove = new ArrayList<>();
+    // List<String> policyToRemove = new ArrayList<>();
     Map<String, PolicyDefinition> policiesMap = new HashMap<>();
     Collection<List<PolicyDefinition>> policies = alertBoltSpec.getBoltPoliciesMap().values();
     List<PolicyDefinition> allPolicy = new ArrayList<>();
@@ -78,9 +78,9 @@ public class AlertPublishFn
     }
     allPolicy.forEach(p -> policiesMap.put(p.getName(), p));
     this.policyDefinitionMap = policiesMap;
-    policyToRemove.addAll(this.policyDefinitionMap.keySet().stream()
+   /* policyToRemove.addAll(this.policyDefinitionMap.keySet().stream()
         .filter(policyId -> !policiesMap.containsKey(policyId)).collect(Collectors.toList()));
-
+*/
     this.streamDefinitionMap = c.sideInput(sdsView);
 
     for (Map.Entry<String, PolicyDefinition> entry : policiesMap.entrySet()) {
@@ -95,7 +95,7 @@ public class AlertPublishFn
       }
     }
 
-    for (String policyId : policyToRemove) {
+   /* for (String policyId : policyToRemove) {
       try {
         this.alertTemplateEngine.unregister(policyId);
         if (deduplicatorMap != null && deduplicatorMap.containsKey(policyId)) {
@@ -104,7 +104,7 @@ public class AlertPublishFn
       } catch (Throwable throwable) {
         LOG.error("Failed to unregister policy {} from template engine", policyId, throwable);
       }
-    }
+    }*/
     Iterable<AlertStreamEvent> itr = c.element().getValue();
     List<AlertStreamEvent> result = new ArrayList<>();
     AlertStreamFilter alertFilter = new PipeStreamFilter(
@@ -113,11 +113,12 @@ public class AlertPublishFn
     itr.forEach(event -> {
       if (deduplicatorMap != null && deduplicatorMap.containsKey(event.getPolicyId())) {
         List<AlertStreamEvent> eventList = deduplicatorMap.get(event.getPolicyId()).dedup(event);
-        if (eventList != null && !eventList.isEmpty()) {
-          AlertStreamEvent filteredEvent = alertFilter.filter(event);
-          if (filteredEvent != null) {
-            result.add(filteredEvent);
-          }
+        if (eventList == null || eventList.isEmpty()) {
+        }
+      } else {
+        AlertStreamEvent filteredEvent = alertFilter.filter(event);
+        if (filteredEvent != null) {
+          result.add(filteredEvent);
         }
       }
     });

@@ -5,6 +5,7 @@
     "description": null,
     "validate": false,
     "timeseries": false,
+    "siteId": "yhd",
     "columns": [
       {
         "name": "ip",

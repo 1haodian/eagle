@@ -42,7 +42,7 @@ public class AlertStreamCallbackBeam extends StreamCallback {
       event.setTimestamp(e.getTimestamp());
       event.setData(e.getData());
       event.setStreamId(outputStream);
-      event.setPolicyId(policyName + siteId);
+      event.setPolicyId(policyName);
       event.setCreatedBy(sp.toString() + siteId);
       event.setCreatedTime(System.currentTimeMillis());
       event.setSchema(streamDefinition);

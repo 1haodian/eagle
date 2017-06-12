@@ -7,7 +7,7 @@
   "outputStreams": [
     "testAlertStream"
   ],
-  "siteId": "yhd",
+  "siteId": "",
   "definition": {
     "type": "siddhi",
     "value": "from oozieStream#window.externalTime(timestamp, 5 sec)  select ip, jobId , operation, count(ip) as visitCount group by operation insert into testAlertStream; ",

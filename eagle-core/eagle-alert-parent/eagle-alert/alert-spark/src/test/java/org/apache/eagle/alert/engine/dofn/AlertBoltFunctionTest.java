@@ -1,6 +1,7 @@
 package org.apache.eagle.alert.engine.dofn;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import org.apache.beam.sdk.testing.TestPipeline;
 import org.apache.beam.sdk.transforms.*;
@@ -28,10 +29,16 @@ public class AlertBoltFunctionTest {
 
   @Rule public final transient TestPipeline p = TestPipeline.create();
 
+  private static final String siteId = "";
+
   @Test public void testAlertBoltFunction() {
     AlertBoltSpec alertBoltSpec = MetadataSerDeser
         .deserialize(getClass().getResourceAsStream("/spark/testAlertBoltSpec.json"),
             AlertBoltSpec.class);
+    alertBoltSpec.addPublishPartition("testAlertStream", "policy4" + siteId, "testAlertPublish1",
+        ImmutableSet.of("operation"));
+    alertBoltSpec.addPublishPartition("testAlertStream", "policy5" + siteId, "testAlertPublish2",
+        ImmutableSet.of("operation"));
     PolicyDefinition policyDefinition1 = MetadataSerDeser
         .deserialize(getClass().getResourceAsStream("/spark/testPolicy1.json"),
             PolicyDefinition.class);
@@ -97,16 +104,17 @@ public class AlertBoltFunctionTest {
 
     List<PartitionedEvent> events = Lists.newArrayList(pevent1, pevent2);
 
-    PCollection<AlertStreamEvent> rs = p.apply("events", Create.of(events)).apply(WithKeys.of(1))
-        .apply(GroupByKey.create()).apply(Values.create())
+    PCollection<KV<String, AlertStreamEvent>> rs = p.apply("events", Create.of(events))
+        .apply(WithKeys.of(1)).apply(GroupByKey.create()).apply(Values.create())
         .apply(new AlertBoltFunction(alertBoltSpecView, sdsView));
     AlertStreamEvent alert = new AlertStreamEvent();
     alert.setTimestamp(1L);
     alert.setSiteId("yhd");
     alert.setStreamId("testAlertStream");
-    alert.setData(new Object[]{"140648764-oozie-oozi-W2017-06-05 04:56:28",1,"yyy.yyy.yyy.yyy",  "start"});
+    alert.setData(new Object[] { "140648764-oozie-oozi-W2017-06-05 04:56:28", 1, "yyy.yyy.yyy.yyy",
+        "start" });
 
-//    PAssert.that(rs).containsInAnyOrder(alert);
+    //    PAssert.that(rs).containsInAnyOrder(alert);
     rs.apply(ParDo.of(new PrintinDoFn1()));
     p.run();
   }
@@ -115,6 +123,10 @@ public class AlertBoltFunctionTest {
     AlertBoltSpec alertBoltSpec = MetadataSerDeser
         .deserialize(getClass().getResourceAsStream("/spark/testAlertBoltSpec.json"),
             AlertBoltSpec.class);
+    alertBoltSpec.addPublishPartition("testAlertStream", "policy4" + siteId, "testAlertPublish1",
+        ImmutableSet.of("operation"));
+    alertBoltSpec.addPublishPartition("testAlertStream", "policy5" + siteId, "testAlertPublish2",
+        ImmutableSet.of("operation"));
     PolicyDefinition policyDefinition1 = MetadataSerDeser
         .deserialize(getClass().getResourceAsStream("/spark/testPolicy1.json"),
             PolicyDefinition.class);
@@ -189,29 +201,31 @@ public class AlertBoltFunctionTest {
 
     List<PartitionedEvent> events = Lists.newArrayList(pevent1, pevent2);
 
-    PCollection<AlertStreamEvent> rs = p.apply("events", Create.of(events)).apply(WithKeys.of(1))
-        .apply(GroupByKey.create()).apply(Values.create())
+    PCollection<KV<String, AlertStreamEvent>> rs = p.apply("events", Create.of(events))
+        .apply(WithKeys.of(1)).apply(GroupByKey.create()).apply(Values.create())
         .apply(new AlertBoltFunction(alertBoltSpecView, sdsView));
     rs.apply(ParDo.of(new PrintinDoFn2()));
     p.run();
   }
 
-  private static class PrintinDoFn1 extends DoFn<AlertStreamEvent, String> {
+  private static class PrintinDoFn1 extends DoFn<KV<String, AlertStreamEvent>, String> {
 
     @ProcessElement public void processElement(ProcessContext c) {
-      System.out.println("PrintinDoFn1" + c.element());
+      System.out.println("PrintinDoFn1 key" + c.element());
+      System.out.println("PrintinDoFn1 value" + c.element().getValue());
       Assert.assertEquals(
-          "Alert {site=yhd, stream=testAlertStream,timestamp=1970-01-01 00:00:00,001,data={jobId=140648764-oozie-oozi-W2017-06-05 04:56:28, visitCount=1, ip=yyy.yyy.yyy.yyy, operation=start}, policyId=policy4yhd, createdBy=StreamPartition[streamId=oozieStream,type=GROUPBY,columns=[operation],sortSpec=[StreamSortSpec[windowPeriod=PT4S,windowMargin=1000]]]yhd, metaVersion=null}",
+          "KV{testAlertPublish1, Alert {site=, stream=testAlertStream,timestamp=1970-01-01 00:00:00,001,data={jobId=140648764-oozie-oozi-W2017-06-05 04:56:28, visitCount=1, ip=yyy.yyy.yyy.yyy, operation=start}, policyId=policy4, createdBy=StreamPartition[streamId=oozieStream,type=GROUPBY,columns=[operation],sortSpec=[StreamSortSpec[windowPeriod=PT4S,windowMargin=1000]]], metaVersion=null}}",
           c.element().toString());
     }
   }
 
-  private static class PrintinDoFn2 extends DoFn<AlertStreamEvent, String> {
+  private static class PrintinDoFn2 extends DoFn<KV<String, AlertStreamEvent>, String> {
 
     @ProcessElement public void processElement(ProcessContext c) {
-      System.out.println("PrintinDoFn2" + c.element());
+      System.out.println("PrintinDoFn2 key" + c.element().getKey());
+      System.out.println("PrintinDoFn2 value" + c.element().getValue());
       Assert.assertEquals(
-          "Alert {site=yhd, stream=testAlertStream,timestamp=1970-01-01 00:00:00,013,data={jobId=140648764-oozie-oozi-W2017-06-05 04:56:28, visitCount=2, ip=yyy.yyy.yyy.yyy, operation=start}, policyId=policy4yhd, createdBy=StreamPartition[streamId=oozieStream,type=GROUPBY,columns=[operation],sortSpec=[StreamSortSpec[windowPeriod=PT4S,windowMargin=1000]]]yhd, metaVersion=null}",
+          "KV{testAlertPublish1, Alert {site=, stream=testAlertStream,timestamp=1970-01-01 00:00:00,013,data={jobId=140648764-oozie-oozi-W2017-06-05 04:56:28, visitCount=2, ip=yyy.yyy.yyy.yyy, operation=start}, policyId=policy4, createdBy=StreamPartition[streamId=oozieStream,type=GROUPBY,columns=[operation],sortSpec=[StreamSortSpec[windowPeriod=PT4S,windowMargin=1000]]], metaVersion=null}}",
           c.element().toString());
     }
   }

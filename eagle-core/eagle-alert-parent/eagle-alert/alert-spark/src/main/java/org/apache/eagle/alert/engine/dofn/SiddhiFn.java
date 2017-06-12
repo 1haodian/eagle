@@ -2,12 +2,10 @@ package org.apache.eagle.alert.engine.dofn;
 
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.windowing.GlobalWindow;
+import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollectionView;
 import org.apache.eagle.alert.coordination.model.AlertBoltSpec;
-import org.apache.eagle.alert.engine.coordinator.PolicyDefinition;
-import org.apache.eagle.alert.engine.coordinator.StreamDefinition;
-import org.apache.eagle.alert.engine.coordinator.StreamNotDefinedException;
-import org.apache.eagle.alert.engine.coordinator.StreamPartition;
+import org.apache.eagle.alert.engine.coordinator.*;
 import org.apache.eagle.alert.engine.evaluator.impl.AlertStreamCallbackBeam;
 import org.apache.eagle.alert.engine.evaluator.impl.SiddhiDefinitionAdapter;
 import org.apache.eagle.alert.engine.model.AlertStreamEvent;
@@ -22,7 +20,7 @@ import org.wso2.siddhi.core.stream.input.InputHandler;
 
 import java.util.*;
 
-public class SiddhiFn extends DoFn<Iterable<PartitionedEvent>, AlertStreamEvent> {
+public class SiddhiFn extends DoFn<Iterable<PartitionedEvent>, KV<String, AlertStreamEvent>> {
 
   private static final Logger LOG = LoggerFactory.getLogger(SiddhiFn.class);
 
@@ -34,6 +32,7 @@ public class SiddhiFn extends DoFn<Iterable<PartitionedEvent>, AlertStreamEvent>
   private PolicyDefinition activedPolicy;
   private StreamPartition sp;
   private List<AlertStreamEvent> results = new ArrayList<>();
+  private Set<PublishPartition> publishPartitions;
 
   public SiddhiFn(PCollectionView<AlertBoltSpec> alertBoltSpecView,
       PCollectionView<Map<String, StreamDefinition>> sdsView) {
@@ -54,6 +53,13 @@ public class SiddhiFn extends DoFn<Iterable<PartitionedEvent>, AlertStreamEvent>
     for (List<PolicyDefinition> policyList : policies) {
       allPolicy.addAll(policyList);
     }
+
+    this.publishPartitions = new HashSet<>();
+    alertBoltSpec.getPublishPartitions().forEach(p -> {
+      if (allPolicy.stream().filter(o -> o.getName().equals(p.getPolicyId())).count() > 0) {
+        publishPartitions.add(p);
+      }
+    });
 
     Map<String, PolicyDefinition> policiesMap = new HashMap<>();
     allPolicy.forEach(p -> policiesMap.put(p.getName(), p));
@@ -86,11 +92,34 @@ public class SiddhiFn extends DoFn<Iterable<PartitionedEvent>, AlertStreamEvent>
       if (!results.isEmpty()) {
         AlertStreamEvent alert = results.get(results.size() - 1);
         LOG.info("emit final result from siddhi " + alert);
-        c.output(alert, new Instant(0), GlobalWindow.INSTANCE);//return final reduced value
+        List<KV<String, AlertStreamEvent>> rs = emit(alert);
+        for (KV<String, AlertStreamEvent> eachRs : rs){
+          c.output(eachRs, new Instant(0), GlobalWindow.INSTANCE);//return final reduced value
+        }
       }
-
     }
+  }
 
+  public List<KV<String, AlertStreamEvent>> emit(AlertStreamEvent event) {
+    Set<PublishPartition> clonedPublishPartitions = new HashSet<>(publishPartitions);
+    List<KV<String, AlertStreamEvent>> result = new ArrayList<>();
+    for (PublishPartition publishPartition : clonedPublishPartitions) {
+      // skip the publish partition which is not belong to this policy and also check streamId
+      PublishPartition cloned = publishPartition.clone();
+      Optional.ofNullable(event).filter(
+          x -> x != null && x.getSchema() != null && cloned.getPolicyId()
+              .equalsIgnoreCase(x.getPolicyId()) && (
+              cloned.getStreamId().equalsIgnoreCase(x.getSchema().getStreamId()) || cloned
+                  .getStreamId().equalsIgnoreCase(Publishment.STREAM_NAME_DEFAULT)))
+          .ifPresent(x -> {
+            cloned.getColumns().stream().filter(y -> event.getSchema().getColumnIndex(y) >= 0
+                && event.getSchema().getColumnIndex(y) < event.getSchema().getColumns().size())
+                .map(y -> event.getData()[event.getSchema().getColumnIndex(y)])
+                .filter(y -> y != null).forEach(y -> cloned.getColumnValues().add(y));
+            result.add(KV.of(cloned.getPublishId(), event));
+          });
+    }
+    return result;
   }
 
   private void prepeareExecutionRuntime(PolicyDefinition policy, Map<String, StreamDefinition> sds)

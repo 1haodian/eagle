@@ -29,15 +29,14 @@ public class AlertBoltFunctionTest {
 
   @Rule public final transient TestPipeline p = TestPipeline.create();
 
-  private static final String siteId = "";
 
   @Test public void testAlertBoltFunction() {
     AlertBoltSpec alertBoltSpec = MetadataSerDeser
         .deserialize(getClass().getResourceAsStream("/spark/testAlertBoltSpec.json"),
             AlertBoltSpec.class);
-    alertBoltSpec.addPublishPartition("testAlertStream", "policy4" + siteId, "testAlertPublish1",
+    alertBoltSpec.addPublishPartition("testAlertStream", "policy4", "testAlertPublish1",
         ImmutableSet.of("operation"));
-    alertBoltSpec.addPublishPartition("testAlertStream", "policy5" + siteId, "testAlertPublish2",
+    alertBoltSpec.addPublishPartition("testAlertStream", "policy5", "testAlertPublish2",
         ImmutableSet.of("operation"));
     PolicyDefinition policyDefinition1 = MetadataSerDeser
         .deserialize(getClass().getResourceAsStream("/spark/testPolicy1.json"),
@@ -123,9 +122,9 @@ public class AlertBoltFunctionTest {
     AlertBoltSpec alertBoltSpec = MetadataSerDeser
         .deserialize(getClass().getResourceAsStream("/spark/testAlertBoltSpec.json"),
             AlertBoltSpec.class);
-    alertBoltSpec.addPublishPartition("testAlertStream", "policy4" + siteId, "testAlertPublish1",
+    alertBoltSpec.addPublishPartition("testAlertStream", "policy4", "testAlertPublish1",
         ImmutableSet.of("operation"));
-    alertBoltSpec.addPublishPartition("testAlertStream", "policy5" + siteId, "testAlertPublish2",
+    alertBoltSpec.addPublishPartition("testAlertStream", "policy5", "testAlertPublish2",
         ImmutableSet.of("operation"));
     PolicyDefinition policyDefinition1 = MetadataSerDeser
         .deserialize(getClass().getResourceAsStream("/spark/testPolicy1.json"),

@@ -77,9 +77,10 @@ public class AlertPublishFn
       allPolicy.addAll(policyList);
     }
     allPolicy.forEach(p -> policiesMap.put(p.getName(), p));
+    this.policyDefinitionMap = policiesMap;
     policyToRemove.addAll(this.policyDefinitionMap.keySet().stream()
         .filter(policyId -> !policiesMap.containsKey(policyId)).collect(Collectors.toList()));
-    this.policyDefinitionMap = policiesMap;
+
     this.streamDefinitionMap = c.sideInput(sdsView);
 
     for (Map.Entry<String, PolicyDefinition> entry : policiesMap.entrySet()) {

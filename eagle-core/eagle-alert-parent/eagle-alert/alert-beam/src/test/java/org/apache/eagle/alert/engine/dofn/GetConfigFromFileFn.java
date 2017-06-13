@@ -4,10 +4,7 @@ import com.google.common.collect.Lists;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.TupleTag;
-import org.apache.eagle.alert.coordination.model.PublishSpec;
-import org.apache.eagle.alert.coordination.model.RouterSpec;
-import org.apache.eagle.alert.coordination.model.SpoutSpec;
-import org.apache.eagle.alert.coordination.model.StreamRouterSpec;
+import org.apache.eagle.alert.coordination.model.*;
 import org.apache.eagle.alert.engine.coordinator.StreamDefinition;
 import org.apache.eagle.alert.engine.coordinator.StreamPartition;
 import org.apache.eagle.alert.engine.coordinator.StreamSortSpec;
@@ -25,11 +22,12 @@ public class GetConfigFromFileFn extends DoFn<KV<String, String>, SpoutSpec> {
     private final TupleTag<PublishSpec> publishSpecTupleTag;
     private final TupleTag<Map<StreamPartition, StreamSortSpec>> sssTag;
     private final TupleTag<Map<StreamPartition, List<StreamRouterSpec>>> srsTag;
+    private final TupleTag<AlertBoltSpec> alertBoltSpecTupleTag;
 
     public GetConfigFromFileFn(TupleTag<SpoutSpec> spoutSpecTupleTag, TupleTag<Map<String, StreamDefinition>> sdsTag,
                                TupleTag<List<StreamPartition>> spTag, TupleTag<RouterSpec> routerSpecTupleTag,
                                TupleTag<PublishSpec> publishSpecTupleTag, TupleTag<Map<StreamPartition, StreamSortSpec>> sssTag,
-                               TupleTag<Map<StreamPartition, List<StreamRouterSpec>>> srsTag
+                               TupleTag<Map<StreamPartition, List<StreamRouterSpec>>> srsTag,TupleTag<AlertBoltSpec> alertBoltSpecTupleTag
     ) {
         this.spoutSpecTupleTag = spoutSpecTupleTag;
         this.sdsTag = sdsTag;
@@ -38,7 +36,9 @@ public class GetConfigFromFileFn extends DoFn<KV<String, String>, SpoutSpec> {
         this.publishSpecTupleTag = publishSpecTupleTag;
         this.sssTag = sssTag;
         this.srsTag = srsTag;
+        this.alertBoltSpecTupleTag = alertBoltSpecTupleTag;
     }
+
 
     @ProcessElement
     public void processElement(ProcessContext c) {
@@ -51,6 +51,7 @@ public class GetConfigFromFileFn extends DoFn<KV<String, String>, SpoutSpec> {
         c.output(sssTag, routerSpec.makeSSS());
         c.output(srsTag, routerSpec.makeSRS());
         c.output(publishSpecTupleTag, SpecFactory.createPublishSpec());
+        c.output(alertBoltSpecTupleTag, SpecFactory.createAlertSpec());
 
     }
 }

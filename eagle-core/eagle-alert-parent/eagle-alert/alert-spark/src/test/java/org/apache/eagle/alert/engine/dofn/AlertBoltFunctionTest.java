@@ -1,6 +1,7 @@
 package org.apache.eagle.alert.engine.dofn;
 
 import com.google.common.collect.Lists;
+import org.apache.beam.sdk.coders.SerializableCoder;
 import org.apache.beam.sdk.testing.TestPipeline;
 import org.apache.beam.sdk.transforms.*;
 import org.apache.beam.sdk.transforms.windowing.AfterProcessingTime;

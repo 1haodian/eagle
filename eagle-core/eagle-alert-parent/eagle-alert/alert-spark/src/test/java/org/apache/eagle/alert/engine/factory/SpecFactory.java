@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import org.apache.eagle.alert.coordination.model.AlertBoltSpec;
+import org.apache.eagle.alert.coordination.model.PublishSpec;
 import org.apache.eagle.alert.coordination.model.RouterSpec;
 import org.apache.eagle.alert.coordination.model.SpoutSpec;
 import org.apache.eagle.alert.engine.coordinator.PolicyDefinition;
@@ -13,6 +14,13 @@ import org.apache.eagle.alert.engine.utils.MetadataSerDeser;
 import java.util.Map;
 
 public class SpecFactory {
+
+  public static PublishSpec createPublishSpec() {
+    PublishSpec publishSpec = MetadataSerDeser
+        .deserialize(SpecFactory.class.getResourceAsStream("/spark/testPublishSpec.json"),
+            PublishSpec.class);
+    return publishSpec;
+  }
 
   public static RouterSpec createRouterSpec() {
     RouterSpec routerSpec = MetadataSerDeser

@@ -9,13 +9,6 @@
       "policyIds": ["policy4","policy5"],
       "dedupIntervalMin": "PT1M",
       "properties":{
-        "subject":"UMP Test Alert",
-        "template":"",
-        "sender": "sender@corp.com",
-        "recipients": "receiver@corp.com",
-        "smtp.server":"mailhost.com",
-        "connection": "plaintext",
-        "smtp.port": "25"
       },
       "serializer" : "org.apache.eagle.alert.engine.publisher.impl.StringEventSerializer"
     }

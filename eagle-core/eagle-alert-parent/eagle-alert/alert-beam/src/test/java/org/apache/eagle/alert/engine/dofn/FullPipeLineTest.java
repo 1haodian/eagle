@@ -7,9 +7,7 @@ import org.apache.beam.sdk.testing.TestStream;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.transforms.Values;
 import org.apache.beam.sdk.transforms.View;
-import org.apache.beam.sdk.transforms.windowing.AfterProcessingTime;
-import org.apache.beam.sdk.transforms.windowing.GlobalWindows;
-import org.apache.beam.sdk.transforms.windowing.Window;
+import org.apache.beam.sdk.transforms.windowing.*;
 import org.apache.beam.sdk.values.*;
 import org.apache.eagle.alert.coordination.model.PublishSpec;
 import org.apache.eagle.alert.coordination.model.RouterSpec;
@@ -62,7 +60,15 @@ public class FullPipeLineTest {
                 .create(KvCoder.of(StringUtf8Coder.of(), StringUtf8Coder.of())).addElements(KV.of("oozie",
                         "{\"ip\":\"yyy.yyy.yyy.yyy\", \"jobId\":\"140648764-oozie-oozi-W2017-06-05 04:56:28\", \"operation\":\"start\", \"timestamp\":\""
                                 + starttime + "\"}")).advanceWatermarkToInfinity();
-        PCollection<KV<String, String>> rawMessage = p.apply("get config by source", source);
+
+        PCollection<KV<String, String>> rawMessage = p.apply("get config by source", source).apply(
+                Window.<KV<String, String>>into(FixedWindows.of(Duration.standardMinutes(5))).triggering(
+                        AfterWatermark.pastEndOfWindow().withEarlyFirings(
+                                AfterProcessingTime.pastFirstElementInPane()
+                                        .plusDelayOf(Duration.standardMinutes(5)))).discardingFiredPanes()
+                        .withAllowedLateness(Duration.ZERO));
+
+
         PCollectionTuple rs = rawMessage.apply("get config windows",
                 Window.<KV<String, String>>into(new GlobalWindows()).triggering(
                         AfterProcessingTime.pastFirstElementInPane().plusDelayOf(Duration.standardSeconds(10)))
@@ -108,6 +114,7 @@ public class FullPipeLineTest {
 
             for (int j = 0; j < partNum; i++) {
                 PCollection<KV<Integer, PartitionedEvent>> peventInPart = pevents.get(i);
+
             }
         }
 

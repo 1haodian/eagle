@@ -24,17 +24,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
-public class AlertPublishFn
-    extends DoFn<KV<String, Iterable<AlertStreamEvent>>, KV<String, Iterable<AlertStreamEvent>>> {
+public class AlertPublishFn extends DoFn<KV<String, Iterable<AlertStreamEvent>>, String> {
 
   private static final Logger LOG = LoggerFactory.getLogger(AlertPublishFn.class);
   private Map<String, AlertPublishPlugin> publishPluginMapping = new HashMap<>(1);
   private PCollectionView<AlertBoltSpec> alertBoltSpecView;
   private PCollectionView<PublishSpec> publishSpecView;
   private PCollectionView<Map<String, StreamDefinition>> sdsView;
-  private Map<String, PolicyDefinition> policyDefinitionMap;
   private Map<String, StreamDefinition> streamDefinitionMap;
   private Map<String, DefaultDeduplicator> deduplicatorMap = new HashMap<>();
   private Config config;
@@ -77,11 +74,9 @@ public class AlertPublishFn
       allPolicy.addAll(policyList);
     }
     allPolicy.forEach(p -> policiesMap.put(p.getName(), p));
-    this.policyDefinitionMap = policiesMap;
    /* policyToRemove.addAll(this.policyDefinitionMap.keySet().stream()
         .filter(policyId -> !policiesMap.containsKey(policyId)).collect(Collectors.toList()));
 */
-    this.streamDefinitionMap = c.sideInput(sdsView);
 
     for (Map.Entry<String, PolicyDefinition> entry : policiesMap.entrySet()) {
       try {
@@ -105,6 +100,7 @@ public class AlertPublishFn
         LOG.error("Failed to unregister policy {} from template engine", policyId, throwable);
       }
     }*/
+    this.streamDefinitionMap = c.sideInput(sdsView);
     Iterable<AlertStreamEvent> itr = c.element().getValue();
     List<AlertStreamEvent> result = new ArrayList<>();
     AlertStreamFilter alertFilter = new PipeStreamFilter(
@@ -139,7 +135,7 @@ public class AlertPublishFn
       notifyAlert(c.element().getKey(), event);
     }
 
-    c.output(KV.of(c.element().getKey(), result));
+    c.output("success alert publishID " + c.element().getKey() + "result size " + result.size());
 
   }
 

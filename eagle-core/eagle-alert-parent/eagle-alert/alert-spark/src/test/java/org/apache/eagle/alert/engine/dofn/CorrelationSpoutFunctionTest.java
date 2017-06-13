@@ -1,6 +1,5 @@
 package org.apache.eagle.alert.engine.dofn;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.beam.sdk.testing.PAssert;
 import org.apache.beam.sdk.testing.TestPipeline;
 import org.apache.beam.sdk.transforms.Create;
@@ -12,8 +11,8 @@ import org.apache.beam.sdk.values.PCollectionList;
 import org.apache.beam.sdk.values.PCollectionView;
 import org.apache.eagle.alert.coordination.model.SpoutSpec;
 import org.apache.eagle.alert.engine.coordinator.StreamDefinition;
+import org.apache.eagle.alert.engine.factory.SpecFactory;
 import org.apache.eagle.alert.engine.model.PartitionedEvent;
-import org.apache.eagle.alert.engine.utils.MetadataSerDeser;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -28,19 +27,11 @@ public class CorrelationSpoutFunctionTest {
   private int numOfRouterBolts = 10;
   @Test public void testCorrelationSpoutFunctionEmpty() {
 
-    SpoutSpec newSpec = MetadataSerDeser
-        .deserialize(getClass().getResourceAsStream("/spark/testSpoutSpec.json"), SpoutSpec.class);
-    PCollectionView<SpoutSpec> specView = p.apply("getSpec", Create.of(newSpec))
+    PCollectionView<SpoutSpec> specView = p.apply("getSpec", Create.of(SpecFactory.createSpoutSpec()))
         .apply(View.asSingleton());
 
-    Map<String, StreamDefinition> sds = MetadataSerDeser
-        .deserialize(getClass().getResourceAsStream("/spark/testStreamDefinitionsSpec.json"),
-            new TypeReference<Map<String, StreamDefinition>>() {
-
-            });
-
     PCollectionView<Map<String, StreamDefinition>> sdsView = p.apply("getSds", Create
-        .of(KV.of("oozieStream", sds.get("oozieStream")), KV.of("hdfs", new StreamDefinition())))
+        .of(KV.of("oozieStream", SpecFactory.createSds().get("oozieStream")), KV.of("hdfs", new StreamDefinition())))
         .apply("viewTags", View.asMap());
 
     PCollectionList<KV<Integer, PartitionedEvent>> input = p
@@ -55,18 +46,12 @@ public class CorrelationSpoutFunctionTest {
   }
 
   @Test public void testCorrelationSpoutFunction() {
-    SpoutSpec newSpec = MetadataSerDeser
-        .deserialize(getClass().getResourceAsStream("/spark/testSpoutSpec.json"), SpoutSpec.class);
-    PCollectionView<SpoutSpec> specView = p.apply("getSpec", Create.of(newSpec))
+
+    PCollectionView<SpoutSpec> specView = p.apply("getSpec", Create.of(SpecFactory.createSpoutSpec()))
         .apply(View.asSingleton());
 
-    Map<String, StreamDefinition> sds = MetadataSerDeser
-        .deserialize(getClass().getResourceAsStream("/spark/testStreamDefinitionsSpec.json"),
-            new TypeReference<Map<String, StreamDefinition>>() {
-
-            });
     PCollectionView<Map<String, StreamDefinition>> sdsView = p.apply("getSds", Create
-        .of(KV.of("oozieStream", sds.get("oozieStream")), KV.of("hdfs", new StreamDefinition())))
+        .of(KV.of("oozieStream", SpecFactory.createSds().get("oozieStream")), KV.of("hdfs", new StreamDefinition())))
         .apply("viewTags", View.asMap());
     long starttime = 1496638588877L;
     PCollectionList<KV<Integer, PartitionedEvent>> input = p.apply("create message", Create.of(KV

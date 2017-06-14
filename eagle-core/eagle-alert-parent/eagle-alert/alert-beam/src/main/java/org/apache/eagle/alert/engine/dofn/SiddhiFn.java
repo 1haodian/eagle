@@ -122,17 +122,17 @@ public class SiddhiFn extends DoFn<Iterable<PartitionedEvent>, KV<String, AlertS
             // skip the publish partition which is not belong to this policy and also check streamId
             PublishPartition cloned = publishPartition.clone();
             Optional.ofNullable(event).filter(
-                    x -> x != null && x.getSchema() != null && cloned.getPolicyId()
-                            .equalsIgnoreCase(x.getPolicyId()) && (
-                            cloned.getStreamId().equalsIgnoreCase(x.getSchema().getStreamId()) || cloned
-                                    .getStreamId().equalsIgnoreCase(Publishment.STREAM_NAME_DEFAULT)))
-                    .ifPresent(x -> {
-                        cloned.getColumns().stream().filter(y -> event.getSchema().getColumnIndex(y) >= 0
-                                && event.getSchema().getColumnIndex(y) < event.getSchema().getColumns().size())
-                                .map(y -> event.getData()[event.getSchema().getColumnIndex(y)])
-                                .filter(y -> y != null).forEach(y -> cloned.getColumnValues().add(y));
-                        result.add(KV.of(cloned.getPublishId(), event));
-                    });
+                x -> x != null && x.getSchema() != null && cloned.getPolicyId()
+                        .equalsIgnoreCase(x.getPolicyId()) && (
+                        cloned.getStreamId().equalsIgnoreCase(x.getSchema().getStreamId()) || cloned
+                                .getStreamId().equalsIgnoreCase(Publishment.STREAM_NAME_DEFAULT)))
+                .ifPresent(x -> {
+                    cloned.getColumns().stream().filter(y -> event.getSchema().getColumnIndex(y) >= 0
+                            && event.getSchema().getColumnIndex(y) < event.getSchema().getColumns().size())
+                            .map(y -> event.getData()[event.getSchema().getColumnIndex(y)])
+                            .filter(y -> y != null).forEach(y -> cloned.getColumnValues().add(y));
+                    result.add(KV.of(cloned.getPublishId(), event));
+                });
         }
         return result;
     }

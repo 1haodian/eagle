@@ -91,7 +91,7 @@ public class BeamExecutionRuntime implements ExecutionRuntime<BeamEnviroment, Pi
         }
 
         String appId = config.getString("appId");
-        String dataSourceConfigTopicList = config.getString("dataSourceConfig.topicList");
+        String dataSourceConfigTopicList = config.getString("dataSourceConfig.topic");
         String dataSourceConfigZkConnection = config.getString("dataSourceConfig.ZkConnection");
         String dataSinkConfigTopic = config.getString("dataSinkConfig.topic");
         String dataSinkConfigBrokerList = config.getString("dataSinkConfig.brokerList");

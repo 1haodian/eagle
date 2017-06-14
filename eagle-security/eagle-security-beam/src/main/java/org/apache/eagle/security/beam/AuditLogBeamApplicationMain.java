@@ -13,7 +13,7 @@ public class AuditLogBeamApplicationMain {
     public static void main(String[] args) {
         Map<String, String> map = new HashMap<>();
         map.put("appId", args[0]);
-        map.put("dataSourceConfig.topicList", args[1]);
+        map.put("dataSourceConfig.topic", args[1]);
         map.put("dataSourceConfig.ZkConnection", args[2]);
         map.put("dataSinkConfig.topic", args[3]);
         map.put("dataSinkConfig.brokerList", args[4]);

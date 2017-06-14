@@ -30,10 +30,10 @@
         </property>
         <!-- data source configurations -->
         <property>
-            <name>dataSourceConfig.topicList</name>
+            <name>dataSourceConfig.topic</name>
             <displayName>Kafka Topic for Data Source</displayName>
-            <value>audit_log1,audit_log2,audit_log3</value>
-            <description>data source topic list, separated by comma</description>
+            <value>audit_log</value>
+            <description>data source topic</description>
             <required>true</required>
         </property>
         <property>

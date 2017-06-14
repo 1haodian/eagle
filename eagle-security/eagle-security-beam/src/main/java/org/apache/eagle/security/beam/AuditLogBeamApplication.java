@@ -30,6 +30,7 @@ import org.apache.eagle.security.service.HdfsSensitivityEntity;
 import org.apache.eagle.security.service.IPZoneEntity;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.joda.time.Duration;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,9 +49,11 @@ public class AuditLogBeamApplication extends BeamApplication {
     private String configPrefix = DEFAULT_CONFIG_PREFIX;
     private static String DEFAULT_CONSUMER_GROUP_ID = "eagleConsumers";
 
-    private static final String OOZIE_SYMBOL = "oozieaudit";
-    private static final String HDFS_SYMBOL = "FSNamesystem.audit";
-    private static final String HBASE_SYMBOL = "SecurityLogger";
+
+    private static final String OOZIE_SYMBOL = "oozie_log";
+    private static final String HDFS_SYMBOL = "hdfs_log";
+    private static final String HBASE_SYMBOL = "hbase_log";
+
 
     private SparkPipelineResult res;
     public SparkPipelineResult getRes() {
@@ -71,13 +74,13 @@ public class AuditLogBeamApplication extends BeamApplication {
             "metadata.broker.list", config.getString("dataSinkConfig.brokerList"),
             "group.id", context.hasPath("consumerGroupId") ? context.getString("consumerGroupId") : DEFAULT_CONSUMER_GROUP_ID
         );
-        String topics = context.getString("topicList");
+        String topic = context.getString("topic");
         String zkConnString = context.getString("ZkConnection");
 
 
         Kafka8IO.Read<String, String> read = Kafka8IO.<String, String>read()
             .withBootstrapServers(zkConnString)
-            .withTopics(Arrays.asList(topics.split(",")))
+            .withTopics(Collections.singletonList(topic))
             .withKeyCoder(StringUtf8Coder.of())
             .withValueCoder(StringUtf8Coder.of())
             .updateKafkaClusterProperties(consumerProps);
@@ -97,13 +100,32 @@ public class AuditLogBeamApplication extends BeamApplication {
         String sinkTopic = config.getString("dataSinkConfig.topic");
 
         PCollection<KV<String, String>> deduped =
-            p.apply(read.withoutMetadata()).apply(ParDo.of(new ExtractLogFn(config)));
+            p.apply(read.withoutMetadata()).apply(ParDo.of(new CleanLogFn())).apply(ParDo.of(new ExtractLogFn(config)));
         deduped.apply(Kafka8IO.<String, String>write()
                 .withBootstrapServers(sinkBrokerList)
                 .withTopic(sinkTopic)
                 .withKeyCoder(StringUtf8Coder.of())
                 .withValueCoder(StringUtf8Coder.of()).updateProducerProperties(ImmutableMap.of("bootstrap.servers", sinkBrokerList)));
         return p;
+    }
+
+
+    private static class CleanLogFn extends  DoFn<KV<String, String>, KV<String, String>> {
+        @ProcessElement
+        public void processElement(ProcessContext c) throws UnsupportedEncodingException {
+            String log = c.element().getValue();
+            LOG.info("--------------------log " + log);
+            JSONObject jsonObject;
+            try {
+                jsonObject = new JSONObject(log);
+                jsonObject = new JSONObject(jsonObject.getString("body"));
+                String emitKey = jsonObject.getString("type");
+                String emitValue = jsonObject.getString("message").replaceAll("\n", "");
+                c.output(KV.of(emitKey, emitValue));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     private static class ExtractLogFn extends DoFn<KV<String, String>, KV<String, String>> {
@@ -115,20 +137,20 @@ public class AuditLogBeamApplication extends BeamApplication {
 
         @ProcessElement
         public void processElement(ProcessContext c) throws UnsupportedEncodingException {
+            String logType = c.element().getKey();
             String log = c.element().getValue();
             Map<String, String> map;
-            LOG.info("--------------------log " + log);
-            if (log.contains(OOZIE_SYMBOL)) {
+            if (logType.equals(OOZIE_SYMBOL)) {
                 map = (Map<String, String>) new OozieAuditLogKafkaDeserializer().deserialize(log.getBytes("UTF-8"));
                 if (map != null) {
                     c.output(KV.of(map.get("user"), map.toString()));
                 }
-            } else if (log.contains(HDFS_SYMBOL)) {
+            } else if (logType.equals(HDFS_SYMBOL)) {
                 map = (Map<String, String>) new HdfsAuditLogKafkaDeserializer(config).deserialize(log.getBytes("UTF-8"));
                 if (map != null) {
                     c.output(KV.of(map.get("user"), map.toString()));
                 }
-            } else if (log.contains(HBASE_SYMBOL)) {
+            } else if (logType.equals(HBASE_SYMBOL)) {
                 map = (Map<String, String>) new HBaseAuditLogKafkaDeseralizer().deserialize(log.getBytes("UTF-8"));
                 if (map != null) {
                     c.output(KV.of(map.get("user"), map.toString()));
@@ -139,124 +161,4 @@ public class AuditLogBeamApplication extends BeamApplication {
         }
     }
 
-    /**
-    private static class SensitivityDataEnrichFn extends DoFn<KV<String, Map<String, String>>, KV<String, Map<String, String>>> {
-        private DataEnrichLCM lcm;
-        private Config config;
-
-        public SensitivityDataEnrichFn(Config config) {
-            this.config = config;
-        }
-        @ProcessElement
-        public void processElement(ProcessContext c) throws UnsupportedEncodingException {
-            Map<String, String> toBeCopied = c.element().getValue();
-            Map<String, String> eventMap = new TreeMap<>(toBeCopied);
-            if(OOZIE_FLAG.equals(c.element().getKey())) {
-                c.output(KV.of(OOZIE_FLAG, toBeCopied));
-            } else if(HDFS_FLAG.equals(c.element().getKey())) {
-                lcm = new HdfsSensitivityDataEnrichLCM(config);
-                dataRetrieval(lcm, config, c.timestamp().toString());
-
-                HdfsSensitivityEntity entity = null;
-
-                Map<String, HdfsSensitivityEntity> externalMap = (Map) ExternalDataCache.getInstance().getJobResult(lcm.getClass());
-
-                if (LOG.isDebugEnabled()) {
-                    LOG.debug("Receive map: " + externalMap + "event: " + eventMap);
-                }
-
-                String src = eventMap.get("src");
-                if (externalMap != null && src != null) {
-                    String simplifiedPath = new SimplifyPath().build(src);
-                    for (String fileDir : externalMap.keySet()) {
-                        Pattern pattern = Pattern.compile(simplifiedPath, Pattern.CASE_INSENSITIVE);
-                        Matcher matcher = pattern.matcher(fileDir);
-                        boolean isMatched = matcher.matches();
-                        if (isMatched) {
-                            entity = externalMap.get(fileDir);
-                            break;
-                        }
-                    }
-                }
-                eventMap.put("sensitivityType", entity == null ? "NA" : entity.getSensitivityType());
-                if (LOG.isDebugEnabled()) {
-                    LOG.debug("After file sensitivity lookup: " + eventMap);
-                }
-                c.output(KV.of(HDFS_FLAG, eventMap));
-            } else if(HBASE_FLAG.equals(c.element().getKey())) {
-                lcm = new HBaseSensitivityDataEnrichLCM(config);
-                dataRetrieval(lcm, config, c.timestamp().toString());
-                HBaseSensitivityEntity entity = null;
-                Map<String, HBaseSensitivityEntity> externalMap = (Map) ExternalDataCache.getInstance().getJobResult(lcm.getClass());
-
-                String src = (String) eventMap.get("scope");
-                if (externalMap != null && src != "") {
-                    for (String key : externalMap.keySet()) {
-                        Pattern pattern = Pattern.compile(key, Pattern.CASE_INSENSITIVE);
-                        if (pattern.matcher(src).find()) {
-                            entity = externalMap.get(key);
-                            break;
-                        }
-                    }
-                }
-                eventMap.put("sensitivityType", entity == null ? "NA" : entity.getSensitivityType());
-                if (LOG.isDebugEnabled()) {
-                    LOG.debug("After file sensitivity lookup: " + eventMap);
-                }
-                c.output(KV.of(HBASE_FLAG, eventMap));
-            } else {
-                LOG.error("Fail to parse log: " + toBeCopied);
-            }
-
-        }
-    }
-
-    private static class IPZoneDataEnrichFn extends DoFn<KV<String, Map<String, String>>, KV<String, String>> {
-        private Config config;
-        private DataEnrichLCM lcm;
-
-        public IPZoneDataEnrichFn(Config config) {
-            this.config = config;
-        }
-        @ProcessElement
-        public void processElement(ProcessContext c) throws UnsupportedEncodingException {
-            Map<String, String> toBeCopied = c.element().getValue();
-            Map<String, String> eventMap = new TreeMap<>(toBeCopied);
-
-            if(OOZIE_FLAG.equals(c.element().getKey())) {
-                String message = Arrays.asList(toBeCopied).get(0).toString();
-                c.output(KV.of(eventMap.get("user"), message));
-            } else if(HDFS_FLAG.equals(c.element().getKey())) {
-                lcm = new IPZoneDataEnrichLCM(config);
-                dataRetrieval(lcm, config, c.timestamp().toString());
-                Map<String, IPZoneEntity> externalMap = (Map) ExternalDataCache.getInstance().getJobResult(lcm.getClass());
-                IPZoneEntity entity = null;
-                if (externalMap != null) {
-                    entity = externalMap.get("host");
-                }
-                eventMap.put("securityZone", entity == null ? "NA" : entity.getSecurityZone());
-                if (LOG.isDebugEnabled()) {
-                    LOG.debug("After IP zone lookup: " + eventMap);
-                }
-                String message = Arrays.asList(eventMap).get(0).toString();
-                c.output(KV.of(eventMap.get("user"), message));
-            } else if(HBASE_FLAG.equals(c.element().getKey())) {
-                String message = Arrays.asList(toBeCopied).get(0).toString();
-                c.output(KV.of(eventMap.get("user"), message));
-            } else {
-                LOG.error("Fail to parse log: " + toBeCopied);
-            }
-        }
-    }
-
-    private static void dataRetrieval(DataEnrichLCM lcm, Config config, String p) {
-        try {
-            ExternalDataJoiner joiner = new ExternalDataJoiner(lcm, config, p);
-            joiner.start();
-        } catch (Exception ex) {
-            LOG.error("Fail bringing up quartz scheduler." + ex);
-            throw new IllegalStateException(ex);
-        }
-    }
-        **/
 }

@@ -1,7 +1,6 @@
 package org.apache.eagle.alert.engine.dofn;
 
 import org.apache.beam.sdk.transforms.DoFn;
-import org.apache.beam.sdk.transforms.windowing.GlobalWindow;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollectionView;
 import org.apache.eagle.alert.coordination.model.AlertBoltSpec;
@@ -11,7 +10,6 @@ import org.apache.eagle.alert.engine.evaluator.impl.SiddhiDefinitionAdapter;
 import org.apache.eagle.alert.engine.model.AlertStreamEvent;
 import org.apache.eagle.alert.engine.model.PartitionedEvent;
 import org.apache.eagle.alert.engine.model.StreamEvent;
-import org.joda.time.Instant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.wso2.siddhi.core.ExecutionPlanRuntime;
@@ -89,13 +87,13 @@ public class SiddhiFn extends DoFn<Iterable<PartitionedEvent>, KV<String, AlertS
         }
         if (streamCallback != null) {
             if (!results.isEmpty()) {
-               // for (AlertStreamEvent alert : results){
-                    AlertStreamEvent alert = results.get(results.size() - 1);
-                    LOG.info("emit final result from siddhi " + alert);
-                    List<KV<String, AlertStreamEvent>> rs = emit(alert);
-                    for (KV<String, AlertStreamEvent> eachRs : rs) {
-                        c.output(eachRs);//return final reduced value
-                    }
+                // for (AlertStreamEvent alert : results){
+                AlertStreamEvent alert = results.get(results.size() - 1);
+                LOG.info("emit final result from siddhi " + alert);
+                List<KV<String, AlertStreamEvent>> rs = emit(alert);
+                for (KV<String, AlertStreamEvent> eachRs : rs) {
+                    c.output(eachRs);//return final reduced value
+                }
                 //}
 
             }

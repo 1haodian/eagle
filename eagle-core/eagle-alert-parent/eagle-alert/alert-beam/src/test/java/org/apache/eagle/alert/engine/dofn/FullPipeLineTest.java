@@ -1,16 +1,12 @@
 package org.apache.eagle.alert.engine.dofn;
 
 import com.google.common.collect.Lists;
-import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import org.apache.beam.sdk.coders.KvCoder;
 import org.apache.beam.sdk.coders.StringUtf8Coder;
 import org.apache.beam.sdk.testing.TestPipeline;
 import org.apache.beam.sdk.testing.TestStream;
-import org.apache.beam.sdk.transforms.GroupByKey;
-import org.apache.beam.sdk.transforms.ParDo;
-import org.apache.beam.sdk.transforms.Values;
-import org.apache.beam.sdk.transforms.View;
+import org.apache.beam.sdk.transforms.*;
 import org.apache.beam.sdk.transforms.windowing.*;
 import org.apache.beam.sdk.values.*;
 import org.apache.eagle.alert.coordination.model.*;
@@ -23,10 +19,11 @@ import org.joda.time.Duration;
 import org.junit.Rule;
 import org.junit.Test;
 
+import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
 
-public class FullPipeLineTest {
+public class FullPipeLineTest implements Serializable {
     @Rule
     public final transient TestPipeline p = TestPipeline.create();
     private int numOfRouterBolts = 10;
@@ -61,17 +58,20 @@ public class FullPipeLineTest {
         long starttime = 1496638588877L;
         TestStream<KV<String, String>> source = TestStream
                 .create(KvCoder.of(StringUtf8Coder.of(), StringUtf8Coder.of())).addElements(KV.of("oozie",
-                        "{\"ip\":\"yyy.yyy.yyy.yyy\", \"jobId\":\"140648764-oozie-oozi-W2017-06-05 04:56:28\", \"operation\":\"start\", \"timestamp\":\""
-                                + starttime + "\"}")).advanceWatermarkToInfinity();
+                        "{\"ip\":\"yyy.yyy.yyy.yyy\", \"jobId\":\"140648764-oozie-oozi-W2017-06-05 04:56:28\", \"operation\":\"start\", \"timestamp\":"
+                                + starttime + "}")).addElements(KV.of("oozie",
+                        "{\"ip\":\"yyy.xxx.yyy.yyy\", \"jobId\":\"140648764-oozie-oozi-W2017-06-05 04:56:28\", \"operation\":\"start\", \"timestamp\":"
+                                + (starttime + 1) + "}")).advanceWatermarkToInfinity();
 
         PCollection<KV<String, String>> rawMessage = p.apply("get config by source", source);
-
-
-        PCollectionTuple rs = rawMessage.apply("get config windows",
+        PCollection<KV<String, String>> windowedRawMsg = rawMessage.apply("get config windows",
                 Window.<KV<String, String>>into(new GlobalWindows()).triggering(
-                        AfterProcessingTime.pastFirstElementInPane().plusDelayOf(Duration.standardSeconds(10)))
-                        .discardingFiredPanes().withAllowedLateness(Duration.ZERO)).apply(
-                ParDo.of(new GetConfigFromFileFn(spoutSpecTupleTag, sdsTag, spTag, routerSpecTupleTag, publishSpecTupleTag, sssTag, srsTag,alertBoltSpecTupleTag))
+                        AfterProcessingTime.pastFirstElementInPane().plusDelayOf(Duration.standardSeconds(1)))
+                        .discardingFiredPanes().withAllowedLateness(Duration.ZERO));
+
+
+        PCollectionTuple rs = windowedRawMsg.apply(
+                ParDo.of(new GetConfigFromFileFn(spoutSpecTupleTag, sdsTag, spTag, routerSpecTupleTag, publishSpecTupleTag, sssTag, srsTag, alertBoltSpecTupleTag))
                         .withOutputTags(spoutSpecTupleTag, TupleTagList.of(sdsTag).and(spTag).and(routerSpecTupleTag).and(publishSpecTupleTag).and(sssTag).and(srsTag).and(alertBoltSpecTupleTag)));
 
 
@@ -84,14 +84,14 @@ public class FullPipeLineTest {
         PCollection<Map<StreamPartition, StreamSortSpec>> sss = rs.get(sssTag);
         PCollection<Map<StreamPartition, List<StreamRouterSpec>>> srs = rs.get(srsTag);
 
-        PCollectionView<SpoutSpec> specView = spoutSpec.apply(View.asSingleton());
-        PCollectionView<RouterSpec> routerView = routerSpec.apply(View.asSingleton());
-        PCollectionView<PublishSpec> publishSpecView = publishSpec.apply(View.asSingleton());
-        PCollectionView<Map<String, StreamDefinition>> sdsView = sds.apply(View.asSingleton());
-        PCollectionView<List<StreamPartition>> spView = sp.apply(View.asSingleton());
-        PCollectionView<Map<StreamPartition, StreamSortSpec>> sssView = sss.apply(View.asSingleton());
-        PCollectionView<Map<StreamPartition, List<StreamRouterSpec>>> srsView = srs.apply(View.asSingleton());
-        PCollectionView<AlertBoltSpec> alertBoltSpecView = alertBoltSpec.apply(View.asSingleton());
+        PCollectionView<SpoutSpec> specView = spoutSpec.apply("SpoutSpec Latest", Latest.globally()).apply("SpoutSpec", View.asSingleton());
+        PCollectionView<RouterSpec> routerView = routerSpec.apply("RouterSpec Latest", Latest.globally()).apply("RouterSpec", View.asSingleton());
+        PCollectionView<PublishSpec> publishSpecView = publishSpec.apply("PublishSpec Latest", Latest.globally()).apply("PublishSpec", View.asSingleton());
+        PCollectionView<AlertBoltSpec> alertBoltSpecView = alertBoltSpec.apply("AlertBoltSpec Latest", Latest.globally()).apply("AlertBoltSpec", View.asSingleton());
+        PCollectionView<Map<String, StreamDefinition>> sdsView = sds.apply("sdsView Latest", Latest.globally()).apply("sdsView", View.asSingleton());
+        PCollectionView<List<StreamPartition>> spView = sp.apply("spView Latest", Latest.globally()).apply("spView", View.asSingleton());
+        PCollectionView<Map<StreamPartition, StreamSortSpec>> sssView = sss.apply("sssView Latest", Latest.globally()).apply("sssView", View.asSingleton());
+        PCollectionView<Map<StreamPartition, List<StreamRouterSpec>>> srsView = srs.apply("srsView Latest", Latest.globally()).apply("srsView", View.asSingleton());
 
         TupleTag<PartitionedEvent> needWindow = new TupleTag<PartitionedEvent>(
                 "needWindow") {
@@ -105,32 +105,38 @@ public class FullPipeLineTest {
         List<StreamPartition> sps = Lists.newArrayList(SpecFactory.createRouterSpec().makeSSS().keySet());
         for (int i = 0; i < numOfRouterBolts; i++) {
             PCollection<KV<Integer, PartitionedEvent>> partition = parts.get(i);
-            PCollectionTuple output = partition.apply(Values.create())
-                    .apply("Find need handle",
+            PCollectionTuple output = partition.apply("Values " + i, Values.create())
+                    .apply("Find need handle " + i,
                             new FindNeedWindowEventFunction(routerView, sdsView, sssView, srsView));
             // output.get(noneedWindow).apply("print1", ParDo.of(new FindNeedHandleEventTest.PrintinDoFn1()));
             PCollectionList<KV<Integer, PartitionedEvent>> pevents = output.get(needWindow)
-                    .apply("covert to (streampartition->pevent)", new StreamPartitionFunction(spView, sps.size()));
+                    .apply("covert to (streampartition->pevent)" + i, new StreamPartitionFunction(spView, sps.size()));
 
 
-            for (int j = 0; j < sps.size(); i++) {
-                PCollection<KV<Integer, PartitionedEvent>> peventInPart = pevents.get(i);
-                StreamPartition streamPartition = sps.get(i);
+            for (int j = 0; j < sps.size(); j++) {
+                PCollection<KV<Integer, PartitionedEvent>> peventInPart = pevents.get(j);
+                StreamPartition streamPartition = sps.get(j);
                 String period = streamPartition.getSortSpec().getWindowPeriod();
                 Duration flush = Duration.parse(period).plus(streamPartition.getSortSpec().getWindowMargin());
-                PCollection<KV<Integer, PartitionedEvent>> windowedPevents = peventInPart.apply(
-                        Window.<KV<Integer, PartitionedEvent>>into(FixedWindows.of(Duration.parse(period))).triggering(
-                                AfterWatermark.pastEndOfWindow().withEarlyFirings(
-                                        AfterProcessingTime.pastFirstElementInPane()
-                                                .plusDelayOf(flush))).discardingFiredPanes()
-                                .withAllowedLateness(Duration.ZERO));
-                windowedPevents.apply(GroupByKey.create()).apply(Values.create())
-                        .apply("alert bolt",new AlertBoltFunction(alertBoltSpecView, sdsView))
-                        .apply("group by key", GroupByKey.create())
-                        .apply("publish",
-                        new AlertPublisherFunction(publishSpecView, alertBoltSpecView, sdsView, ConfigFactory.load()));
+                String partitionAndBoltNum = streamPartition + "" + i;
+                WindowFn<Object, IntervalWindow> windowFn = FixedWindows.of(Duration.parse(period));
+                PCollection<KV<Integer, PartitionedEvent>> windowedPevents = peventInPart
+                        .apply("window" + partitionAndBoltNum,
+                                Window.<KV<Integer, PartitionedEvent>>into(windowFn).triggering(
+                                        AfterWatermark.pastEndOfWindow().withEarlyFirings(
+                                                AfterProcessingTime.pastFirstElementInPane()
+                                                        .plusDelayOf(flush))).discardingFiredPanes()
+                                        .withAllowedLateness(Duration.ZERO));
+
+
+                windowedPevents.apply("group by" + partitionAndBoltNum, GroupByKey.create())
+                        .apply("Values " + partitionAndBoltNum, Values.create())
+                        .apply("alert bolt" + partitionAndBoltNum, new AlertBoltFunction(alertBoltSpecView, sdsView))
+                        .apply("group by key" + partitionAndBoltNum, GroupByKey.create())
+                        .apply("publish" + partitionAndBoltNum,
+                                new AlertPublisherFunction(publishSpecView, alertBoltSpecView, sdsView, ConfigFactory.load()));
             }
         }
-
+        p.run();
     }
 }

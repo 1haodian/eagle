@@ -39,14 +39,14 @@ public class MyDoFnTest implements Serializable {
     //GameStats
   }
 
-  @Test public void testGetOffsetAndConfigs() throws Exception {
+ /* @Test public void testGetOffsetAndConfigs() throws Exception {
 
     SpoutSpec newSpec = MetadataSerDeser
         .deserialize(getClass().getResourceAsStream("/spark/testSpoutSpec.json"), SpoutSpec.class);
-   /* p.getCoderRegistry()
+   *//* p.getCoderRegistry()
         .registerCoderForClass(SpoutSpec.class, SerializableCoder.of(SpoutSpec.class));
     p.getCoderRegistry()
-        .registerCoderForClass(MyType.class, MyTypeCoder.of());*/
+        .registerCoderForClass(MyType.class, MyTypeCoder.of());*//*
     MyType myType = new MyType();
     myType.setValue(2L);
     myType.setType("test");
@@ -58,6 +58,6 @@ public class MyDoFnTest implements Serializable {
     DoFnTester<String, Integer> fnTester = DoFnTester.of(new MyDoFn(view));
   //  fnTester.setSideInput(view, GlobalWindow.INSTANCE, myType);
     List<Integer> testOutputs = fnTester.processBundle("input1", "input12", "input123");
-  }
+  }*/
 
 }

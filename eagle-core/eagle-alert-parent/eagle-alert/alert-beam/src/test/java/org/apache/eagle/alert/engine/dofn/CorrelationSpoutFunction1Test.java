@@ -12,7 +12,7 @@ import org.apache.beam.sdk.transforms.windowing.AfterProcessingTime;
 import org.apache.beam.sdk.transforms.windowing.GlobalWindows;
 import org.apache.beam.sdk.transforms.windowing.Window;
 import org.apache.beam.sdk.values.*;
-import org.apache.eagle.alert.coordination.model.SpoutSpec;
+import org.apache.eagle.alert.coordination.model.*;
 import org.apache.eagle.alert.engine.coordinator.StreamDefinition;
 import org.apache.eagle.alert.engine.coordinator.StreamPartition;
 import org.apache.eagle.alert.engine.coordinator.StreamSortSpec;
@@ -24,6 +24,7 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import java.io.Serializable;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -33,7 +34,26 @@ public class CorrelationSpoutFunction1Test implements Serializable {
   private final TupleTag<SpoutSpec> spoutSpecTupleTag = new TupleTag<SpoutSpec>() {
 
   };
-  private final TupleTag<String> message = new TupleTag<String>() {
+  private final TupleTag<RouterSpec> routerSpecTupleTag = new TupleTag<RouterSpec>() {
+
+  };
+  private final TupleTag<AlertBoltSpec> alertBoltSpecTupleTag = new TupleTag<AlertBoltSpec>() {
+
+  };
+  private final TupleTag<PublishSpec> publishSpecTupleTag = new TupleTag<PublishSpec>() {
+
+  };
+  private final TupleTag<Map<String, StreamDefinition>> sdsTag = new TupleTag<Map<String, StreamDefinition>>() {
+
+  };
+  private final TupleTag<List<StreamPartition>> spTag = new TupleTag<List<StreamPartition>>() {
+
+  };
+
+  private final TupleTag<Map<StreamPartition, StreamSortSpec>> sssTag = new TupleTag<Map<StreamPartition, StreamSortSpec>>() {
+
+  };
+  private final TupleTag<Map<StreamPartition, List<StreamRouterSpec>>> srsTag = new TupleTag<Map<StreamPartition, List<StreamRouterSpec>>>() {
 
   };
 
@@ -47,8 +67,9 @@ public class CorrelationSpoutFunction1Test implements Serializable {
     PCollection<KV<String, String>> rawMessage = p.apply("get config by source", source);
 
     PCollectionTuple rs = rawMessage.apply(
-        ParDo.of(new GetConfigFromFileFn(spoutSpecTupleTag, message, SpecFactory.createSpoutSpec()))
-            .withOutputTags(message, TupleTagList.of(spoutSpecTupleTag)));
+            ParDo.of(new GetConfigFromFileFn(spoutSpecTupleTag, sdsTag, spTag, routerSpecTupleTag, publishSpecTupleTag, sssTag, srsTag, alertBoltSpecTupleTag))
+                    .withOutputTags(spoutSpecTupleTag, TupleTagList.of(sdsTag).and(spTag).and(routerSpecTupleTag).and(publishSpecTupleTag).and(sssTag).and(srsTag).and(alertBoltSpecTupleTag)));
+
     PCollectionView<SpoutSpec> specView = rs.get(spoutSpecTupleTag).apply("SpoutSpec windows",
         Window.<SpoutSpec>into(new GlobalWindows()).triggering(
             AfterProcessingTime.pastFirstElementInPane().plusDelayOf(Duration.standardSeconds(10)))

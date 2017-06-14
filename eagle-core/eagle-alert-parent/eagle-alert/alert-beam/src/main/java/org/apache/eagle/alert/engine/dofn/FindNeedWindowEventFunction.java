@@ -10,6 +10,7 @@ import org.apache.eagle.alert.engine.coordinator.StreamDefinition;
 import org.apache.eagle.alert.engine.coordinator.StreamPartition;
 import org.apache.eagle.alert.engine.coordinator.StreamSortSpec;
 import org.apache.eagle.alert.engine.model.PartitionedEvent;
+import org.joda.time.Instant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,9 +53,9 @@ public class FindNeedWindowEventFunction
                         PartitionedEvent pevent = c.element();
                         Map<StreamPartition, StreamSortSpec> sss = c.sideInput(sssView);
                         if (!needWindowHandler(pevent, sss)) {
-                            c.output(noneedWindow, c.element());
+                            c.outputWithTimestamp(noneedWindow, pevent, new Instant(pevent.getTimestamp()));
                         } else {
-                            c.output(needWindow, c.element());
+                            c.outputWithTimestamp(needWindow, pevent, new Instant(pevent.getTimestamp()));
                         }
                     }
                 }).withOutputTags(noneedWindow, TupleTagList.of(needWindow))

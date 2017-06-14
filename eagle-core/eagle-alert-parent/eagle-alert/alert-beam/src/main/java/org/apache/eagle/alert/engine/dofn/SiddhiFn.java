@@ -87,18 +87,17 @@ public class SiddhiFn extends DoFn<Iterable<PartitionedEvent>, KV<String, AlertS
             }
 
         }
-    }
-
-    @FinishBundle
-    public void finish(FinishBundleContext c) {
         if (streamCallback != null) {
             if (!results.isEmpty()) {
-                AlertStreamEvent alert = results.get(results.size() - 1);
-                LOG.info("emit final result from siddhi " + alert);
-                List<KV<String, AlertStreamEvent>> rs = emit(alert);
-                for (KV<String, AlertStreamEvent> eachRs : rs) {
-                    c.output(eachRs, new Instant(0), GlobalWindow.INSTANCE);//return final reduced value
-                }
+               // for (AlertStreamEvent alert : results){
+                    AlertStreamEvent alert = results.get(results.size() - 1);
+                    LOG.info("emit final result from siddhi " + alert);
+                    List<KV<String, AlertStreamEvent>> rs = emit(alert);
+                    for (KV<String, AlertStreamEvent> eachRs : rs) {
+                        c.output(eachRs);//return final reduced value
+                    }
+                //}
+
             }
         }
     }

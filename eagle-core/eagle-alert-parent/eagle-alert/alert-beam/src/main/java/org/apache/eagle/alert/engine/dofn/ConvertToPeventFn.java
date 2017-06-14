@@ -11,6 +11,7 @@ import org.apache.eagle.alert.engine.coordinator.StreamDefinition;
 import org.apache.eagle.alert.engine.coordinator.StreamPartition;
 import org.apache.eagle.alert.engine.model.PartitionedEvent;
 import org.apache.eagle.alert.engine.model.StreamEvent;
+import org.joda.time.Instant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -106,7 +107,7 @@ public class ConvertToPeventFn extends DoFn<KV<String, String>, KV<Integer, Part
                 if (mod >= groupingStrategy.startSequence
                         && mod < groupingStrategy.startSequence + numOfRouterBolts) {
                     PartitionedEvent pEvent = new PartitionedEvent(event, groupingStrategy.partition, hash);
-                    c.output(KV.of(mod, pEvent));
+                    c.outputWithTimestamp(KV.of(mod, pEvent), new Instant(pEvent.getTimestamp()));
                 } else {
                     if (LOG.isDebugEnabled()) {
                         LOG.debug("Message filtered with mod {} not within range {} and {} for message {}", mod,

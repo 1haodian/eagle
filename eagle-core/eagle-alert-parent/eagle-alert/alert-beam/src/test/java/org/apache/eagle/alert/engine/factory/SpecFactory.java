@@ -41,9 +41,9 @@ public class SpecFactory {
                 .deserialize(SpecFactory.class.getResourceAsStream("/beam/testAlertBoltSpec.json"),
                         AlertBoltSpec.class);
 
-        alertBoltSpec.addPublishPartition("testAlertStream", "policy4", "testAlertPublish1",
+        alertBoltSpec.addPublishPartition("testAlertStream", "policy4", "file-testAlertStream",
                 ImmutableSet.of("operation"));
-        alertBoltSpec.addPublishPartition("testAlertStream", "policy5", "testAlertPublish2",
+        alertBoltSpec.addPublishPartition("testAlertStream", "policy5", "file-testAlertStream",
                 ImmutableSet.of("operation"));
         PolicyDefinition policyDefinition1 = MetadataSerDeser
                 .deserialize(SpecFactory.class.getResourceAsStream("/beam/testPolicy1.json"),

@@ -1,6 +1,5 @@
 package org.apache.eagle.alert.engine.evaluator.impl;
 
-import com.google.common.collect.ImmutableList;
 import org.apache.eagle.alert.engine.coordinator.PolicyDefinition;
 import org.apache.eagle.alert.engine.coordinator.StreamDefinition;
 import org.apache.eagle.alert.engine.coordinator.StreamPartition;

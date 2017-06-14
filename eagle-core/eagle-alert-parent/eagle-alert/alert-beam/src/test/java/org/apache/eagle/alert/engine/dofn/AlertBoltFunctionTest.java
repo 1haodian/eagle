@@ -136,7 +136,7 @@ public class AlertBoltFunctionTest {
             System.out.println("PrintinDoFn1 key" + c.element());
             System.out.println("PrintinDoFn1 value" + c.element().getValue());
             Assert.assertEquals(
-                    "KV{testAlertPublish1, Alert {site=yhd, stream=testAlertStream,timestamp=1970-01-01 00:00:00,001,data={jobId=140648764-oozie-oozi-W2017-06-05 04:56:28, visitCount=1, ip=yyy.yyy.yyy.yyy, operation=start}, policyId=policy4, createdBy=Beam engine StreamPartition[streamId=oozieStream,type=GROUPBY,columns=[operation],sortSpec=[StreamSortSpec[windowPeriod=PT4S,windowMargin=1000]]]yhd, metaVersion=null}}",
+                    "KV{file-testAlertStream, Alert {site=yhd, stream=testAlertStream,timestamp=1970-01-01 00:00:00,001,data={jobId=140648764-oozie-oozi-W2017-06-05 04:56:28, visitCount=1, ip=yyy.yyy.yyy.yyy, operation=start}, policyId=policy4, createdBy=Beam engine StreamPartition[streamId=oozieStream,type=GROUPBY,columns=[operation],sortSpec=[StreamSortSpec[windowPeriod=PT4S,windowMargin=1000]]]yhd, metaVersion=null}}",
                     c.element().toString());
         }
     }
@@ -147,7 +147,7 @@ public class AlertBoltFunctionTest {
             System.out.println("PrintinDoFn2 key" + c.element().getKey());
             System.out.println("PrintinDoFn2 value" + c.element().getValue());
             Assert.assertEquals(
-                    "KV{testAlertPublish1, Alert {site=yhd, stream=testAlertStream,timestamp=1970-01-01 00:00:00,013,data={jobId=140648764-oozie-oozi-W2017-06-05 04:56:28, visitCount=2, ip=yyy.yyy.yyy.yyy, operation=start}, policyId=policy4, createdBy=Beam engine StreamPartition[streamId=oozieStream,type=GROUPBY,columns=[operation],sortSpec=[StreamSortSpec[windowPeriod=PT4S,windowMargin=1000]]]yhd, metaVersion=null}}",
+                    "KV{file-testAlertStream, Alert {site=yhd, stream=testAlertStream,timestamp=1970-01-01 00:00:00,013,data={jobId=140648764-oozie-oozi-W2017-06-05 04:56:28, visitCount=2, ip=yyy.yyy.yyy.yyy, operation=start}, policyId=policy4, createdBy=Beam engine StreamPartition[streamId=oozieStream,type=GROUPBY,columns=[operation],sortSpec=[StreamSortSpec[windowPeriod=PT4S,windowMargin=1000]]]yhd, metaVersion=null}}",
                     c.element().toString());
         }
     }

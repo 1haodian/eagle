@@ -1,5 +1,6 @@
 package org.apache.eagle.alert.engine.dofn;
 
+import com.google.common.collect.Lists;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollectionView;
@@ -31,11 +32,22 @@ public class SiddhiFn extends DoFn<Iterable<PartitionedEvent>, KV<String, AlertS
     private StreamPartition sp;
     private List<AlertStreamEvent> results = new ArrayList<>();
     private Set<PublishPartition> publishPartitions;
+    private boolean returnMergedResult = Boolean.TRUE;
 
     public SiddhiFn(PCollectionView<AlertBoltSpec> alertBoltSpecView,
-                    PCollectionView<Map<String, StreamDefinition>> sdsView) {
+                    PCollectionView<Map<String, StreamDefinition>> sdsView,
+                    boolean returnMergedResult) {
         this.alertBoltSpecView = alertBoltSpecView;
         this.sdsView = sdsView;
+        this.returnMergedResult = returnMergedResult;
+
+    }
+
+    public SiddhiFn(PCollectionView<AlertBoltSpec> alertBoltSpecView,
+                    PCollectionView<Map<String, StreamDefinition>> sdsView
+    ) {
+        this(alertBoltSpecView, sdsView, true);
+
     }
 
     @Setup
@@ -87,14 +99,17 @@ public class SiddhiFn extends DoFn<Iterable<PartitionedEvent>, KV<String, AlertS
         }
         if (streamCallback != null) {
             if (!results.isEmpty()) {
-                // for (AlertStreamEvent alert : results){
-                AlertStreamEvent alert = results.get(results.size() - 1);
-                LOG.info("emit final result from siddhi " + alert);
-                List<KV<String, AlertStreamEvent>> rs = emit(alert);
-                for (KV<String, AlertStreamEvent> eachRs : rs) {
-                    c.output(eachRs);//return final reduced value
+
+                if (returnMergedResult) {
+                    results = Lists.newArrayList(results.get(results.size() - 1));
                 }
-                //}
+                for (AlertStreamEvent alert : results) {
+                    LOG.info("emit final result from siddhi " + alert);
+                    List<KV<String, AlertStreamEvent>> rs = emit(alert);
+                    for (KV<String, AlertStreamEvent> eachRs : rs) {
+                        c.output(eachRs);//return final reduced value
+                    }
+                }
 
             }
         }
@@ -107,17 +122,17 @@ public class SiddhiFn extends DoFn<Iterable<PartitionedEvent>, KV<String, AlertS
             // skip the publish partition which is not belong to this policy and also check streamId
             PublishPartition cloned = publishPartition.clone();
             Optional.ofNullable(event).filter(
-                x -> x != null && x.getSchema() != null && cloned.getPolicyId()
-                        .equalsIgnoreCase(x.getPolicyId()) && (
-                        cloned.getStreamId().equalsIgnoreCase(x.getSchema().getStreamId()) || cloned
-                                .getStreamId().equalsIgnoreCase(Publishment.STREAM_NAME_DEFAULT)))
-                .ifPresent(x -> {
-                    cloned.getColumns().stream().filter(y -> event.getSchema().getColumnIndex(y) >= 0
-                            && event.getSchema().getColumnIndex(y) < event.getSchema().getColumns().size())
-                            .map(y -> event.getData()[event.getSchema().getColumnIndex(y)])
-                            .filter(y -> y != null).forEach(y -> cloned.getColumnValues().add(y));
-                    result.add(KV.of(cloned.getPublishId(), event));
-                });
+                    x -> x != null && x.getSchema() != null && cloned.getPolicyId()
+                            .equalsIgnoreCase(x.getPolicyId()) && (
+                            cloned.getStreamId().equalsIgnoreCase(x.getSchema().getStreamId()) || cloned
+                                    .getStreamId().equalsIgnoreCase(Publishment.STREAM_NAME_DEFAULT)))
+                    .ifPresent(x -> {
+                        cloned.getColumns().stream().filter(y -> event.getSchema().getColumnIndex(y) >= 0
+                                && event.getSchema().getColumnIndex(y) < event.getSchema().getColumns().size())
+                                .map(y -> event.getData()[event.getSchema().getColumnIndex(y)])
+                                .filter(y -> y != null).forEach(y -> cloned.getColumnValues().add(y));
+                        result.add(KV.of(cloned.getPublishId(), event));
+                    });
         }
         return result;
     }

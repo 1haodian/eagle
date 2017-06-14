@@ -11,7 +11,7 @@
       "properties":{
         "rotate_every_kb" : 1,
         "number_of_files" :1,
-        "fileName": "D://eagle-alert.txt"
+        "fileName": "/home/yhd/eagle-alert.txt"
 
       },
       "serializer" : "org.apache.eagle.alert.engine.publisher.impl.StringEventSerializer"

@@ -61,7 +61,9 @@ public class FullPipeLineTest implements Serializable {
                         "{\"ip\":\"yyy.yyy.yyy.yyy\", \"jobId\":\"140648764-oozie-oozi-W2017-06-05 04:56:28\", \"operation\":\"start\", \"timestamp\":"
                                 + starttime + "}")).addElements(KV.of("oozie",
                         "{\"ip\":\"yyy.xxx.yyy.yyy\", \"jobId\":\"140648764-oozie-oozi-W2017-06-05 04:56:28\", \"operation\":\"start\", \"timestamp\":"
-                                + (starttime + 1) + "}")).advanceWatermarkToInfinity();
+                                + (starttime + 1) + "}")).addElements(KV.of("oozie",
+                        "{\"ip\":\"yyy.jjj.yyy.yyy\", \"jobId\":\"140648764-oozie-oozi-W2017-06-05 04:56:28\", \"operation\":\"start\", \"timestamp\":"
+                                + -1496638588877L + "}")).advanceWatermarkToInfinity();
 
         PCollection<KV<String, String>> rawMessage = p.apply("get config by source", source);
         PCollection<KV<String, String>> windowedRawMsg = rawMessage.apply("get config windows",
@@ -101,6 +103,8 @@ public class FullPipeLineTest implements Serializable {
                 "noneedWindow") {
 
         };
+
+
         PCollectionList<KV<Integer, PartitionedEvent>> parts = rawMessage.apply(new CorrelationSpoutFunction(specView, sdsView, numOfRouterBolts));
         List<StreamPartition> sps = Lists.newArrayList(SpecFactory.createRouterSpec().makeSSS().keySet());
         for (int i = 0; i < numOfRouterBolts; i++) {
@@ -108,7 +112,19 @@ public class FullPipeLineTest implements Serializable {
             PCollectionTuple output = partition.apply("Values " + i, Values.create())
                     .apply("Find need handle " + i,
                             new FindNeedWindowEventFunction(routerView, sdsView, sssView, srsView));
-            // output.get(noneedWindow).apply("print1", ParDo.of(new FindNeedHandleEventTest.PrintinDoFn1()));
+            PCollection<PartitionedEvent> directEmitPevents = output.get(noneedWindow);
+            directEmitPevents.apply("direct send to siddhi windows" + i,
+                    Window.<PartitionedEvent>into(new GlobalWindows()).triggering(
+                            AfterProcessingTime.pastFirstElementInPane().plusDelayOf(Duration.standardSeconds(1)))
+                            .discardingFiredPanes().withAllowedLateness(Duration.ZERO))
+                    .apply("direct send to siddhi with keys " + i, WithKeys.of(i))
+                    .apply("direct send to siddhi group by key " + i, GroupByKey.create())
+                    .apply("direct send to siddhi Values " + i, Values.create())
+                    .apply("direct send to siddhi " + i, new AlertBoltFunction(alertBoltSpecView, sdsView, false))
+                    .apply("group by publish id " + i, GroupByKey.create())
+                    .apply("publish " + i,
+                            new AlertPublisherFunction(publishSpecView, alertBoltSpecView, sdsView, ConfigFactory.load()));
+
             PCollectionList<KV<Integer, PartitionedEvent>> pevents = output.get(needWindow)
                     .apply("covert to (streampartition->pevent)" + i, new StreamPartitionFunction(spView, sps.size()));
 
@@ -121,7 +137,7 @@ public class FullPipeLineTest implements Serializable {
                 String partitionAndBoltNum = streamPartition + "" + i;
                 WindowFn<Object, IntervalWindow> windowFn = FixedWindows.of(Duration.parse(period));
                 PCollection<KV<Integer, PartitionedEvent>> windowedPevents = peventInPart
-                        .apply("window" + partitionAndBoltNum,
+                        .apply("window " + partitionAndBoltNum,
                                 Window.<KV<Integer, PartitionedEvent>>into(windowFn).triggering(
                                         AfterWatermark.pastEndOfWindow().withEarlyFirings(
                                                 AfterProcessingTime.pastFirstElementInPane()
@@ -129,11 +145,11 @@ public class FullPipeLineTest implements Serializable {
                                         .withAllowedLateness(Duration.ZERO));
 
 
-                windowedPevents.apply("group by" + partitionAndBoltNum, GroupByKey.create())
+                windowedPevents.apply("group by partition " + partitionAndBoltNum, GroupByKey.create())
                         .apply("Values " + partitionAndBoltNum, Values.create())
-                        .apply("alert bolt" + partitionAndBoltNum, new AlertBoltFunction(alertBoltSpecView, sdsView))
-                        .apply("group by key" + partitionAndBoltNum, GroupByKey.create())
-                        .apply("publish" + partitionAndBoltNum,
+                        .apply("alert bolt " + partitionAndBoltNum, new AlertBoltFunction(alertBoltSpecView, sdsView))
+                        .apply("group by publish id " + partitionAndBoltNum, GroupByKey.create())
+                        .apply("publish " + partitionAndBoltNum,
                                 new AlertPublisherFunction(publishSpecView, alertBoltSpecView, sdsView, ConfigFactory.load()));
             }
         }

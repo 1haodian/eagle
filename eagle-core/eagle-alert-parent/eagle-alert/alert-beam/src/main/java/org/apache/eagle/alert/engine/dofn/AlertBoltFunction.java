@@ -17,17 +17,26 @@ public class AlertBoltFunction extends
 
     private PCollectionView<AlertBoltSpec> alertBoltSpecView;
     private PCollectionView<Map<String, StreamDefinition>> sdsView;
+    private boolean returnMergedResult = Boolean.TRUE;
 
     public AlertBoltFunction(PCollectionView<AlertBoltSpec> alertBoltSpecView,
-                             PCollectionView<Map<String, StreamDefinition>> sdsView) {
+                             PCollectionView<Map<String, StreamDefinition>> sdsView,
+                             boolean returnMergedResult) {
         this.alertBoltSpecView = alertBoltSpecView;
         this.sdsView = sdsView;
+        this.returnMergedResult = returnMergedResult;
+    }
+
+    public AlertBoltFunction(PCollectionView<AlertBoltSpec> alertBoltSpecView,
+                             PCollectionView<Map<String, StreamDefinition>> sdsView
+    ) {
+        this(alertBoltSpecView, sdsView, true);
     }
 
     @Override
     public PCollection<KV<String, AlertStreamEvent>> expand(
             PCollection<Iterable<PartitionedEvent>> input) {
-        return input.apply(ParDo.of(new SiddhiFn(alertBoltSpecView, sdsView))
+        return input.apply(ParDo.of(new SiddhiFn(alertBoltSpecView, sdsView, returnMergedResult))
                 .withSideInputs(alertBoltSpecView, sdsView));
     }
 }

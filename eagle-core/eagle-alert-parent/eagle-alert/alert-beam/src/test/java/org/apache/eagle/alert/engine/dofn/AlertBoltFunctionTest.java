@@ -13,6 +13,7 @@ import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PCollectionView;
 import org.apache.eagle.alert.coordination.model.AlertBoltSpec;
+import org.apache.eagle.alert.engine.ReuseSparkContextRule;
 import org.apache.eagle.alert.engine.coordinator.StreamDefinition;
 import org.apache.eagle.alert.engine.coordinator.StreamPartition;
 import org.apache.eagle.alert.engine.coordinator.StreamSortSpec;
@@ -23,6 +24,7 @@ import org.apache.eagle.alert.engine.model.PartitionedEvent;
 import org.apache.eagle.alert.engine.model.StreamEvent;
 import org.joda.time.Duration;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
 
 import java.util.List;
@@ -32,15 +34,21 @@ public class AlertBoltFunctionTest {
 
     //@Rule public final transient TestPipeline p = TestPipeline.create(options);
 
+    @Rule
+    public ReuseSparkContextRule reuseContext = ReuseSparkContextRule.yes();
+
+    private static final transient SparkPipelineOptions options =
+            PipelineOptionsFactory.create().as(SparkPipelineOptions.class);
 
     @Test public void testAlertBoltFunction() {
-        SparkPipelineOptions options =
-                PipelineOptionsFactory.create().as(SparkPipelineOptions.class);
+
+        options.setRunner(SparkRunner.class);
         Duration batchIntervalDuration = Duration.standardSeconds(5);
         options.setBatchIntervalMillis(batchIntervalDuration.getMillis());
         options.setMinReadTimeMillis(batchIntervalDuration.minus(1).getMillis());
         options.setMaxRecordsPerBatch(1000L);
         options.setRunner(SparkRunner.class);
+
         Pipeline p = Pipeline.create(options);
 
         PCollectionView<Map<String, StreamDefinition>> sdsView = p.apply("getSds", Create
@@ -76,8 +84,6 @@ public class AlertBoltFunctionTest {
 
     @Test public void testAlertBoltFunctionTwoEventGroupBy() {
 
-        SparkPipelineOptions options =
-                PipelineOptionsFactory.create().as(SparkPipelineOptions.class);
         Duration batchIntervalDuration = Duration.standardSeconds(5);
         options.setBatchIntervalMillis(batchIntervalDuration.getMillis());
         options.setMinReadTimeMillis(batchIntervalDuration.minus(1).getMillis());

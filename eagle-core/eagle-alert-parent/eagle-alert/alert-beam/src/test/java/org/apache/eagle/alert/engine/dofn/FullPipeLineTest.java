@@ -53,8 +53,16 @@ public class FullPipeLineTest implements Serializable {
 
     };
 
+    private final TupleTag<PartitionedEvent> needWindow = new TupleTag<PartitionedEvent>(
+            "needWindow") {
+    };
+    private final TupleTag<PartitionedEvent> noneedWindow = new TupleTag<PartitionedEvent>(
+            "noneedWindow") {
+    };
+
     @Test
     public void testFullPipeLine() {
+
         long starttime = 1496638588877L;
         TestStream<KV<String, String>> source = TestStream
                 .create(KvCoder.of(StringUtf8Coder.of(), StringUtf8Coder.of())).addElements(KV.of("oozie",
@@ -94,15 +102,6 @@ public class FullPipeLineTest implements Serializable {
         PCollectionView<List<StreamPartition>> spView = sp.apply("spView Latest", Latest.globally()).apply("spView", View.asSingleton());
         PCollectionView<Map<StreamPartition, StreamSortSpec>> sssView = sss.apply("sssView Latest", Latest.globally()).apply("sssView", View.asSingleton());
         PCollectionView<Map<StreamPartition, List<StreamRouterSpec>>> srsView = srs.apply("srsView Latest", Latest.globally()).apply("srsView", View.asSingleton());
-
-        TupleTag<PartitionedEvent> needWindow = new TupleTag<PartitionedEvent>(
-                "needWindow") {
-
-        };
-        TupleTag<PartitionedEvent> noneedWindow = new TupleTag<PartitionedEvent>(
-                "noneedWindow") {
-
-        };
 
 
         PCollectionList<KV<Integer, PartitionedEvent>> parts = rawMessage.apply(new CorrelationSpoutFunction(specView, sdsView, numOfRouterBolts));

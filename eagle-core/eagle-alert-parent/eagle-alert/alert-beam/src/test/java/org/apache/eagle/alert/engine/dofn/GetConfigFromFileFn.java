@@ -24,6 +24,12 @@ public class GetConfigFromFileFn extends DoFn<KV<String, String>, SpoutSpec> {
     private final TupleTag<Map<StreamPartition, StreamSortSpec>> sssTag;
     private final TupleTag<Map<StreamPartition, List<StreamRouterSpec>>> srsTag;
     private final TupleTag<AlertBoltSpec> alertBoltSpecTupleTag;
+    private SpoutSpec spoutSpec;
+    private List<StreamPartition> sps;
+    private Map<String, StreamDefinition> sds;
+    private RouterSpec routerSpec;
+    private PublishSpec publishSpec;
+    private AlertBoltSpec alertBoltSpec;
 
     public GetConfigFromFileFn(TupleTag<SpoutSpec> spoutSpecTupleTag, TupleTag<Map<String, StreamDefinition>> sdsTag,
                                TupleTag<List<StreamPartition>> spTag, TupleTag<RouterSpec> routerSpecTupleTag,
@@ -40,19 +46,33 @@ public class GetConfigFromFileFn extends DoFn<KV<String, String>, SpoutSpec> {
         this.alertBoltSpecTupleTag = alertBoltSpecTupleTag;
     }
 
+    public void prepare() {
+        this.spoutSpec = SpecFactory.createSpoutSpec();
+        RouterSpec routerSpec = SpecFactory.createRouterSpec();
+        this.routerSpec = routerSpec;
+        this.sps = Lists.newArrayList(routerSpec.makeSSS().keySet());
+        this.sds = SpecFactory.createSds();
+        this.publishSpec = SpecFactory.createPublishSpec();
+        this.alertBoltSpec = SpecFactory.createAlertSpec();
+
+    }
+
 
     @ProcessElement
     public void processElement(ProcessContext c) {
-        c.outputWithTimestamp(spoutSpecTupleTag, SpecFactory.createSpoutSpec(), new Instant(System.currentTimeMillis()));
-        c.outputWithTimestamp(sdsTag, SpecFactory.createSds(), new Instant(System.currentTimeMillis()));
-        List<StreamPartition> sps = Lists.newArrayList(SpecFactory.createRouterSpec().makeSSS().keySet());
-        c.outputWithTimestamp(spTag, sps, new Instant(System.currentTimeMillis()));
-        RouterSpec routerSpec = SpecFactory.createRouterSpec();
-        c.outputWithTimestamp(routerSpecTupleTag, routerSpec, new Instant(System.currentTimeMillis()));
-        c.outputWithTimestamp(sssTag, routerSpec.makeSSS(), new Instant(System.currentTimeMillis()));
-        c.outputWithTimestamp(srsTag, routerSpec.makeSRS(), new Instant(System.currentTimeMillis()));
-        c.outputWithTimestamp(publishSpecTupleTag, SpecFactory.createPublishSpec(), new Instant(System.currentTimeMillis()));
-        c.outputWithTimestamp(alertBoltSpecTupleTag, SpecFactory.createAlertSpec(), new Instant(System.currentTimeMillis()));
+        long currtmillis = System.currentTimeMillis();
+        if(spoutSpec == null){
+            prepare();
+            c.outputWithTimestamp(spoutSpecTupleTag, spoutSpec, new Instant(currtmillis));
+            c.outputWithTimestamp(sdsTag, sds, new Instant(currtmillis));
+            c.outputWithTimestamp(spTag, sps, new Instant(currtmillis));
+            c.outputWithTimestamp(routerSpecTupleTag, routerSpec, new Instant(currtmillis));
+            c.outputWithTimestamp(sssTag, routerSpec.makeSSS(), new Instant(currtmillis));
+            c.outputWithTimestamp(srsTag, routerSpec.makeSRS(), new Instant(currtmillis));
+            c.outputWithTimestamp(publishSpecTupleTag, publishSpec, new Instant(currtmillis));
+            c.outputWithTimestamp(alertBoltSpecTupleTag, alertBoltSpec, new Instant(currtmillis));
+        }
 
     }
+
 }

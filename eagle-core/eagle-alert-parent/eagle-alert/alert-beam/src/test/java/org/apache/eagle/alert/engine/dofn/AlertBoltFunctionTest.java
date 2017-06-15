@@ -1,8 +1,10 @@
 package org.apache.eagle.alert.engine.dofn;
 
 import com.google.common.collect.Lists;
-import org.apache.beam.sdk.coders.SerializableCoder;
-import org.apache.beam.sdk.testing.TestPipeline;
+import org.apache.beam.runners.spark.SparkPipelineOptions;
+import org.apache.beam.runners.spark.SparkRunner;
+import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.transforms.*;
 import org.apache.beam.sdk.transforms.windowing.AfterProcessingTime;
 import org.apache.beam.sdk.transforms.windowing.GlobalWindows;
@@ -21,7 +23,6 @@ import org.apache.eagle.alert.engine.model.PartitionedEvent;
 import org.apache.eagle.alert.engine.model.StreamEvent;
 import org.joda.time.Duration;
 import org.junit.Assert;
-import org.junit.Rule;
 import org.junit.Test;
 
 import java.util.List;
@@ -29,10 +30,18 @@ import java.util.Map;
 
 public class AlertBoltFunctionTest {
 
-    @Rule public final transient TestPipeline p = TestPipeline.create();
+    //@Rule public final transient TestPipeline p = TestPipeline.create(options);
 
 
     @Test public void testAlertBoltFunction() {
+        SparkPipelineOptions options =
+                PipelineOptionsFactory.create().as(SparkPipelineOptions.class);
+        Duration batchIntervalDuration = Duration.standardSeconds(5);
+        options.setBatchIntervalMillis(batchIntervalDuration.getMillis());
+        options.setMinReadTimeMillis(batchIntervalDuration.minus(1).getMillis());
+        options.setMaxRecordsPerBatch(1000L);
+        options.setRunner(SparkRunner.class);
+        Pipeline p = Pipeline.create(options);
 
         PCollectionView<Map<String, StreamDefinition>> sdsView = p.apply("getSds", Create
                 .of(KV.of("oozieStream", SpecFactory.createSds().get("oozieStream")), KV.of("hdfs", new StreamDefinition())))
@@ -66,6 +75,15 @@ public class AlertBoltFunctionTest {
     }
 
     @Test public void testAlertBoltFunctionTwoEventGroupBy() {
+
+        SparkPipelineOptions options =
+                PipelineOptionsFactory.create().as(SparkPipelineOptions.class);
+        Duration batchIntervalDuration = Duration.standardSeconds(5);
+        options.setBatchIntervalMillis(batchIntervalDuration.getMillis());
+        options.setMinReadTimeMillis(batchIntervalDuration.minus(1).getMillis());
+        options.setMaxRecordsPerBatch(1000L);
+        options.setRunner(SparkRunner.class);
+        Pipeline p = Pipeline.create(options);
 
         PCollectionView<Map<String, StreamDefinition>> sdsView = p.apply("getSds", Create
                 .of(KV.of("oozieStream", SpecFactory.createSds().get("oozieStream")), KV.of("hdfs", new StreamDefinition())))

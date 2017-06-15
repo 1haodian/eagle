@@ -32,6 +32,7 @@
         <module>alert-devtools</module>
         <module>alert-service</module>
         <module>alert-spark</module>
+        <module>alert-beam</module>
     </modules>
 
 	<properties>

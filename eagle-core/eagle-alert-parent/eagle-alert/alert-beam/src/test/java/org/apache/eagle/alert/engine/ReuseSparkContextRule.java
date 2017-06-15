@@ -17,7 +17,6 @@
  */
 package org.apache.eagle.alert.engine;
 
-import org.apache.beam.runners.spark.translation.SparkContextFactory;
 import org.junit.rules.ExternalResource;
 
 /**
@@ -41,6 +40,6 @@ public class ReuseSparkContextRule extends ExternalResource {
 
   @Override
   protected void before() throws Throwable {
-    System.setProperty(SparkContextFactory.TEST_REUSE_SPARK_CONTEXT, Boolean.toString(reuse));
+   // System.setProperty(SparkContextFactory.TEST_REUSE_SPARK_CONTEXT, Boolean.toString(reuse));
   }
 }

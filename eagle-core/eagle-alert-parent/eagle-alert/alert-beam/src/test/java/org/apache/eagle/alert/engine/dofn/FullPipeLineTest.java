@@ -10,6 +10,7 @@ import org.apache.beam.sdk.transforms.*;
 import org.apache.beam.sdk.transforms.windowing.*;
 import org.apache.beam.sdk.values.*;
 import org.apache.eagle.alert.coordination.model.*;
+import org.apache.eagle.alert.engine.ReuseSparkContextRule;
 import org.apache.eagle.alert.engine.coordinator.StreamDefinition;
 import org.apache.eagle.alert.engine.coordinator.StreamPartition;
 import org.apache.eagle.alert.engine.coordinator.StreamSortSpec;
@@ -25,8 +26,13 @@ import java.util.Map;
 
 public class FullPipeLineTest implements Serializable {
     @Rule
+    public transient ReuseSparkContextRule reuseContext = ReuseSparkContextRule.yes();
+
+    @Rule
     public final transient TestPipeline p = TestPipeline.create();
+
     private int numOfRouterBolts = 10;
+
     private final TupleTag<SpoutSpec> spoutSpecTupleTag = new TupleTag<SpoutSpec>() {
 
     };

@@ -1,0 +1,43 @@
+{
+  "name": "policy5",
+  "description": "测试策略",
+  "inputStreams": [
+    "oozieStream"
+  ],
+  "outputStreams": [
+    "testAlertStream"
+  ],
+  "siteId": "yhd",
+  "definition": {
+    "type": "siddhi",
+    "value": "from oozieStream#window.externalTime(timestamp, 5 sec)  select ip, jobId , operation, count(ip) as visitCount group by operation insert into testAlertStream; ",
+    "handlerClass": null,
+    "properties": {},
+    "inputStreams": [],
+    "outputStreams": []
+  },
+  "stateDefinition": null,
+  "policyStatus": "ENABLED",
+  "alertDefinition": {
+    "templateType": "TEXT",
+    "subject": "",
+    "body": "",
+    "severity": "WARNING",
+    "category": "DEFAULT"
+  },
+  "partitionSpec": [
+    {
+      "streamId": "oozieStream",
+      "type": "GROUPBY",
+      "columns": ["operation"],
+      "sortSpec": {
+        "windowPeriod": "PT5S",
+        "windowMargin": 2000
+      }
+    }
+  ],
+  "dedicated": false,
+  "parallelismHint": 5,
+  "alertSeverity": "WARNING",
+  "alertCategory": "DEFAULT"
+}

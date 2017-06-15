@@ -1,0 +1,36 @@
+{
+  "oozieStream": {
+    "streamId": "oozieStream",
+    "dataSource": null,
+    "description": null,
+    "validate": false,
+    "timeseries": false,
+    "siteId": "yhd",
+    "columns": [
+      {
+        "name": "ip",
+        "type": "STRING",
+        "defaultValue": null,
+        "required": false
+      },
+      {
+        "name": "jobId",
+        "type": "STRING",
+        "defaultValue": null,
+        "required": false
+      },
+      {
+        "name": "operation",
+        "type": "STRING",
+        "defaultValue": null,
+        "required": false
+      },
+      {
+        "name": "timestamp",
+        "type" : "LONG",
+        "defaultValue": 0,
+        "required":true
+      }
+    ]
+  }
+}

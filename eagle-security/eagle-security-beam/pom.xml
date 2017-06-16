@@ -42,11 +42,9 @@
         </dependency>
         <!-- KafkaIO -->
         <dependency>
-            <groupId>beamkafka8</groupId>
-            <artifactId>kafka8</artifactId>
-            <version>1.0</version>
-            <systemPath>${project.basedir}/repo/beamkafka8/kafka8/1.0/beam-sdks-java-io-kafka8-0.7.0-SNAPSHOT.jar</systemPath>
-            <scope>system</scope>
+            <groupId>com.yhd.beam</groupId>
+            <artifactId>kafkaio8</artifactId>
+            <version>2.0.0</version>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>

@@ -34,37 +34,25 @@
             <groupId>org.apache.beam</groupId>
             <artifactId>beam-sdks-java-core</artifactId>
             <version>${beam.version}</version>
-            <systemPath>${project.basedir}/repo/beam-sdks-java-core-0.7.0-SNAPSHOT.jar</systemPath>
-            <scope>system</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.beam</groupId>
             <artifactId>beam-runners-core-java</artifactId>
             <version>${beam.version}</version>
-            <systemPath>${project.basedir}/repo/beam-runners-core-java-0.7.0-SNAPSHOT.jar</systemPath>
-            <scope>system</scope>
         </dependency>
         <dependency>
-            <groupId>beam</groupId>
-            <artifactId>spark2runner</artifactId>
-            <version>${beam.version}</version>
-            <systemPath>${project.basedir}/repo/beam-runners-spark-0.7.0-SNAPSHOT.jar</systemPath>
-            <scope>system</scope>
+            <groupId>com.yhd.beam</groupId>
+            <artifactId>sparkrunner</artifactId>
+            <version>2.0.0</version>
         </dependency>
         <dependency>
             <groupId>net.bytebuddy</groupId>
             <artifactId>byte-buddy</artifactId>
             <version>1.6.8</version>
         </dependency>
-        <dependency>
-            <groupId>org.apache.avro</groupId>
-            <artifactId>avro-mapred</artifactId>
-            <version>1.8.1</version>
-            <systemPath>${project.basedir}/repo/avro-1.8.1.jar</systemPath>
-            <scope>system</scope>
-        </dependency>
 
-        <dependency>
+
+       <!-- <dependency>
             <groupId>com.google.auth</groupId>
             <artifactId>google-auth-library-credentials</artifactId>
             <version>0.6.0</version>
@@ -88,7 +76,7 @@
             <groupId>com.google.apis</groupId>
             <artifactId>google-api-services-bigquery</artifactId>
             <version>v2-rev295-1.22.0</version>
-        </dependency>
+        </dependency>-->
         <dependency>
             <groupId>com.google.inject</groupId>
             <artifactId>guice</artifactId>

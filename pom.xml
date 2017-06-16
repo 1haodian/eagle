@@ -184,7 +184,7 @@
 
 
         <spark.core.version>2.1.0</spark.core.version>
-        <beam.version>0.7.0-SNAPSHOT</beam.version>
+        <beam.version>2.0.0</beam.version>
 
         <!--  Client -->
         <!--<kafka-client.version>0.9.0.0</kafka-client.version>-->

@@ -147,7 +147,7 @@
         <property>
             <name>topology.dynamicAllocation</name>
             <displayName>Spark streaming dynamicAllocation config</displayName>
-            <value>true</value>
+            <value>false</value>
             <description>spark.streaming.dynamicAllocation.enable</description>
         </property>
         <property>
@@ -179,6 +179,12 @@
             <displayName>Mainclass</displayName>
             <value>org.apache.eagle.security.beam.AuditLogBeamApplicationMain</value>
             <description>Mainclass</description>
+        </property>
+        <property>
+            <name>topology.batchInterval</name>
+            <displayName>batchInterval</displayName>
+            <value>20</value>
+            <description>batchInterval</description>
         </property>
         <property>
             <name>topology.sparkhome</name>

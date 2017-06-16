@@ -20,6 +20,7 @@ public class AuditLogBeamApplicationMain {
         map.put("autoOffsetResetConfig", args[5]);
         map.put("sparkRunner.checkpoint", args[6]);
         map.put("sparkRunner.master", args[7]);
+        map.put("topology.batchInterval", args[8]);
 
         Config config = ConfigFactory.parseMap(map);
 

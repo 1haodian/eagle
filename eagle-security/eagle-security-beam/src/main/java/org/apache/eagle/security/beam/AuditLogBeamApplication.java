@@ -15,19 +15,9 @@ import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.eagle.app.BeamApplication;
 import org.apache.eagle.app.environment.impl.BeamEnviroment;
-import org.apache.eagle.security.beam.dataEnrich.HBaseSensitivityDataEnrichLCM;
-import org.apache.eagle.security.beam.dataEnrich.IPZoneDataEnrichLCM;
 import org.apache.eagle.security.beam.parser.HBaseAuditLogKafkaDeseralizer;
 import org.apache.eagle.security.beam.parser.HdfsAuditLogKafkaDeserializer;
-import org.apache.eagle.security.beam.dataEnrich.HdfsSensitivityDataEnrichLCM;
 import org.apache.eagle.security.beam.parser.OozieAuditLogKafkaDeserializer;
-import org.apache.eagle.security.enrich.DataEnrichLCM;
-import org.apache.eagle.security.enrich.ExternalDataCache;
-import org.apache.eagle.security.enrich.ExternalDataJoiner;
-import org.apache.eagle.security.beam.util.SimplifyPath;
-import org.apache.eagle.security.service.HBaseSensitivityEntity;
-import org.apache.eagle.security.service.HdfsSensitivityEntity;
-import org.apache.eagle.security.service.IPZoneEntity;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.joda.time.Duration;
 import org.json.JSONObject;
@@ -36,8 +26,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.UnsupportedEncodingException;
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * @Since 4/20/17
@@ -69,7 +57,7 @@ public class AuditLogBeamApplication extends BeamApplication {
         }
         Map<String, String> consumerProps = ImmutableMap.<String, String>of(
             ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, config.getString("autoOffsetResetConfig"),
-            "metadata.broker.list", config.getString("dataSinkConfig.brokerList"),
+            "metadata.broker.list", config.getString("dataSourceConfig.ZkConnection"),
             "group.id", context.hasPath("consumerGroupId") ? context.getString("consumerGroupId") : DEFAULT_CONSUMER_GROUP_ID
         );
         String topic = context.getString("topic");
@@ -111,11 +99,9 @@ public class AuditLogBeamApplication extends BeamApplication {
         @ProcessElement
         public void processElement(ProcessContext c) throws UnsupportedEncodingException {
             String log = c.element().getValue();
-            LOG.info("--------------------log " + log);
             JSONObject jsonObject;
             try {
                 jsonObject = new JSONObject(log);
-                jsonObject = new JSONObject(jsonObject.getString("body"));
                 String emitKey = jsonObject.getString("type");
                 String emitValue = jsonObject.getString("message").replaceAll("\n", "");
                 c.output(KV.of(emitKey, emitValue));
@@ -136,6 +122,7 @@ public class AuditLogBeamApplication extends BeamApplication {
         public void processElement(ProcessContext c) throws UnsupportedEncodingException {
             String logType = c.element().getKey();
             String log = c.element().getValue();
+            LOG.info("-------------------- " + logType + "-----------" + log);
             Map<String, String> map;
             if (logType.equals(OOZIE_SYMBOL)) {
                 map = (Map<String, String>) new OozieAuditLogKafkaDeserializer().deserialize(log.getBytes("UTF-8"));

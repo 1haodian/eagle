@@ -91,7 +91,7 @@ public class BeamExecutionRuntime implements ExecutionRuntime<BeamEnviroment, Pi
         }
 
         String appId = config.getString("appId");
-        String dataSourceConfigTopicList = config.getString("dataSourceConfig.topic");
+        String dataSourceConfigTopic = config.getString("dataSourceConfig.topic");
         String dataSourceConfigZkConnection = config.getString("dataSourceConfig.ZkConnection");
         String dataSinkConfigTopic = config.getString("dataSinkConfig.topic");
         String dataSinkConfigBrokerList = config.getString("dataSinkConfig.brokerList");
@@ -99,7 +99,7 @@ public class BeamExecutionRuntime implements ExecutionRuntime<BeamEnviroment, Pi
         String sparkRunnerCheckpoint = config.getString("sparkRunner.checkpoint");
         String sparkRunnerMaster = config.getString("sparkRunner.master");
 
-        sparkLauncher.addAppArgs(appId, dataSourceConfigTopicList, dataSourceConfigZkConnection, dataSinkConfigTopic,
+        sparkLauncher.addAppArgs(appId, dataSourceConfigTopic, dataSourceConfigZkConnection, dataSinkConfigTopic,
                 dataSinkConfigBrokerList, autoOffsetResetConfig, sparkRunnerCheckpoint, sparkRunnerMaster);
         return sparkLauncher;
     }

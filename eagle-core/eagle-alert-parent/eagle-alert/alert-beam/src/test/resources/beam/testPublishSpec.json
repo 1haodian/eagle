@@ -1,0 +1,20 @@
+{
+  "version": "version1",
+  "topologyName": "testTopology",
+  "boltId": "alertPublishBolt",
+  "publishments": [
+    {
+      "type": "org.apache.eagle.alert.engine.publisher.impl.AlertFilePublisher",
+      "name":"file-testAlertStream",
+      "policyIds": ["policy4","policy5"],
+      "dedupIntervalMin": "PT1M",
+      "properties":{
+        "rotate_every_kb" : 1,
+        "number_of_files" :1,
+        "fileName": "/home/yhd/eagle-alert.txt"
+
+      },
+      "serializer" : "org.apache.eagle.alert.engine.publisher.impl.StringEventSerializer"
+    }
+  ]
+}

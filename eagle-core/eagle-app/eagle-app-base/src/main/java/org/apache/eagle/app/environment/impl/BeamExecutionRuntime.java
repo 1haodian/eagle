@@ -100,7 +100,6 @@ public class BeamExecutionRuntime implements ExecutionRuntime<BeamEnviroment, Pi
         String sparkRunnerMaster = config.getString("sparkRunner.master");
         String sparkBatchInterval = config.getString("topology.batchInterval");
 
-
         sparkLauncher.addAppArgs(appId, dataSourceConfigTopic, dataSourceConfigZkConnection, dataSinkConfigTopic,
                 dataSinkConfigBrokerList, autoOffsetResetConfig, sparkRunnerCheckpoint, sparkRunnerMaster, sparkBatchInterval);
         return sparkLauncher;

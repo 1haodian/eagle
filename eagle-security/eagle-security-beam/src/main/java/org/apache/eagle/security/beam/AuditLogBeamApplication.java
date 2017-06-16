@@ -72,10 +72,10 @@ public class AuditLogBeamApplication extends BeamApplication {
             .updateKafkaClusterProperties(consumerProps);
 
         SparkPipelineOptions options = PipelineOptionsFactory.as(SparkPipelineOptions.class);
-        Duration batchIntervalDuration = Duration.standardSeconds(5);
+        Duration batchIntervalDuration = Duration.standardSeconds(config.getInt("topology.batchInterval"));
         options.setBatchIntervalMillis(batchIntervalDuration.getMillis());
         options.setMinReadTimeMillis(batchIntervalDuration.minus(1).getMillis());
-        options.setMaxRecordsPerBatch(1000L);
+        options.setMaxRecordsPerBatch(5000L);
         options.setRunner(SparkRunner.class);
         options.setAppName(config.getString("appId"));
         options.setCheckpointDir(config.getString("sparkRunner.checkpoint"));
